@@ -3,8 +3,9 @@
 // @description Доп. стата при заказе товара
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.0
-// @include https://virtonomica.ru/vera/main/unit/view/*/supply*
+// @version 1.2
+// @include https://virtonomica.ru/vera/main/unit/view/*/supply
+// @include https://virtonomica.ru/vera/main/unit/view/*/supply#confirm-modal
 // @run-at document-idle
 // ==/UserScript==
 

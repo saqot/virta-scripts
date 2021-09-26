@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name VIRTA::Создание юнитов
+// @name VIRTA::Mass Create Units
 // @description Оптовое создание юнитов в виртономике.
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.0
+// @version 1.5
 // @include https://virtonomica.ru/vera/main/unit/create/*
 // @include https://virtonomica.ru/vera/main/unit/create/*#confirm-modal
 // @run-at document-idle
