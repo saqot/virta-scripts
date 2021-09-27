@@ -3,7 +3,7 @@
 // @description Продление(пересоздание) инновации на виллах
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.1
+// @version 1.2
 // @include https://virtonomica.ru/vera/main/management_action/*/artefact/list
 // @include https://virtonomica.ru/vera/main/management_action/*/artefact/list#
 // @run-at document-idle
@@ -16,7 +16,7 @@ let run = async function () {
     $ = win.$;
     
     function consoleEcho(text, isRrror = false) {
-        const bg = isRrror === true ? '#ee2805' : '#3897c7'
+        const bg = isRrror === true ? '#af1a00' : '#3897c7'
         console.log(`\n %c VIRTA::EIV %c ${text} \n\n`, 'color: #FFFFFF; background: #030307; padding:5px 0;', `color: #FFFFFF; background: ${bg}; padding:5px 0;`);
     }
     
@@ -174,7 +174,7 @@ let run = async function () {
         });
     }
     
-    function pareSlot(slot, unitID) {
+    function pareSlot(slot, unitID, specMatch) {
         return new Promise(async (resolve) => {
             const slotId = slot.id;
             slot.art = {};
@@ -182,12 +182,20 @@ let run = async function () {
             let arts_ = await getListArtefacts(unitID, slotId);
             let arts = [];
             
+            
             switch (slot.symbol) {
-                case 'villa': // здесь выбираем или производство или лабы
-                    arts = arts_.filter(function (el) {
-                        const m = el.name.match(/.*Качество.*продукции.*/i);
-                        return !!m;
-                    });
+                case 'villa': // здесь выбираем или производство или лабы или магазины
+                    if (specMatch) {
+                        arts = arts_.filter(function (el) {
+                            const rgxp = new RegExp(specMatch, 'gi');
+                            const m = el.name.match(rgxp);
+                            return !!m;
+                        });
+                    } else {
+                        arts = [[]];
+                    }
+                    
+                    
                     break;
                 case 'other':
                     // выбираем Региональный сервисный центр
@@ -199,7 +207,7 @@ let run = async function () {
                 case 'politics':
                     // выбираем Политическая агитация за фантики
                     arts = arts_.filter(function (el) {
-                        const m = el.name.match(/.*Политическая агитация.*/i);
+                        const m = el.name.match(/.*агитация.*/i);
                         return !!m;
                     });
                     break;
@@ -208,10 +216,10 @@ let run = async function () {
             }
             
             if (arts.length === 0) {
-                console.error(`НЕ смогли отфильтровать нужную инновацию для слота ${slot.name}`);
+                consoleEcho(`НЕ смогли отфильтровать нужную инновацию для слота '${slot.name}'`, true);
             }
             if (arts.length > 1) {
-                console.error(`Инноваций получилось больше чем одна  для слота ${slot.name}`);
+                consoleEcho(`Инноваций получилось больше чем одна  для слота ${slot.name}`, true);
             }
             slot.art = arts[0];
             resolve(slot);
@@ -231,35 +239,49 @@ let run = async function () {
             
             vills.map(async function (vill) {
                 const unitID = vill.id;
-                let slots = await getListSlots(unitID);
                 
+                let specialization = {
+                    '[L]': '^научный.*',        // Научный координационный центр
+                    '[Q]': '^качество.*',       // Качество производимой в регионе продукции
+                    '[S]': '.*электронной.*',   // Центр электронной коммерции
+                };
+                
+                const m = vill['name'].match(/\[(\w+)\]/gi);
+                let specMatch = m[0] !== undefined ? m[0] : null;
+                specMatch = (specMatch && specialization[specMatch] !== undefined) ? specialization[specMatch] : null
+                
+                
+                let slots = await getListSlots(unitID);
                 slots = await Promise.all(slots.map(async (slot) => {
-                    return await pareSlot(slot, unitID);
+                    return await pareSlot(slot, unitID, specMatch);
                 }));
                 
-                // провверяем арты на expired и удаляем просрочку для установки новых
-                vill['arts'].map(async function (art, ax) {
-                    if (art['ttl'] === '10') {
-                        await deleteArt(art['unit_id'], art['id'])
-                        delete (vill['arts'][ax]);
-                    } else {
-                        if (parseInt(art['expires']) <= 30) {
-                            await deleteArt(unitID, art['id'])
-                            delete (vill['arts'][ax]);
-                        }
-                    }
-                });
-                
-                // назнаем инновации
+                // назначаем инновации
                 slots.map(async function (slot) {
                     const artefactId = slot['art']['id'];
+                    
+                    if (artefactId === undefined || !artefactId) {
+                        return;
+                    }
                     
                     const art = vill['arts'].find(function (el) {
                         return el['id'] === artefactId;
                     });
                     
                     if (art === undefined) {
-                        const res = await attachArt(unitID, slot['id'], slot['art']['id'])
+                        // назначем для тех, кого уже нет
+                        await attachArt(unitID, slot['id'], slot['art']['id'])
+                    } else {
+                        // Политическая агитация - обновляем всегда
+                        if (art['ttl'] === '10') {
+                            await deleteArt(art['unit_id'], art['id'])
+                            await attachArt(unitID, slot['id'], slot['art']['id'])
+                        } else {
+                            if (parseInt(art['expires']) <= 30) {
+                                await deleteArt(unitID, art['id'])
+                                await attachArt(unitID, slot['id'], slot['art']['id'])
+                            }
+                        }
                     }
                     
                 });
@@ -273,11 +295,11 @@ let run = async function () {
                     
                     setTimeout(function () {
                         $btnUpdate.html(`Обновили вилл: ${i}`)
-    
+                        
                         setTimeout(function () {
                             $btnUpdate.html(`Обновить виллы еще разок`)
                             $btnUpdate.removeClass('disabled');
-        
+                            
                         }, 1000);
                         
                     }, 1000);
