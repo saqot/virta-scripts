@@ -15,7 +15,7 @@ let run = async function () {
     let win = (typeof (unsafeWindow) != 'undefined' ? unsafeWindow : top.window);
     $ = win.$;
     
-    let ver = '1.4';
+    let ver = '1.5';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
