@@ -3,7 +3,7 @@
 // @description Продление(пересоздание) инновации на виллах
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.3
+// @version 1.4
 // @include https://virtonomica.ru/vera/main/management_action/*/artefact/list
 // @include https://virtonomica.ru/vera/main/management_action/*/artefact/list#
 // @run-at document-idle
@@ -15,9 +15,11 @@ let run = async function () {
     let win = (typeof (unsafeWindow) != 'undefined' ? unsafeWindow : top.window);
     $ = win.$;
     
+    let ver = '1.4';
+    
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
-        console.log(`\n %c VIRTA::EIV %c ${text} \n\n`, 'color: #FFFFFF; background: #030307; padding:5px 0;', `color: #FFFFFF; background: ${bg}; padding:5px 0;`);
+        console.log(`\n %c VIRTA::EIV / ${ver} %c ${text} \n\n`, 'color: #FFFFFF; background: #030307; padding:5px 0;', `color: #FFFFFF; background: ${bg}; padding:5px 0;`);
     }
     
     consoleEcho('Продление(пересоздание) инновации на виллах');
