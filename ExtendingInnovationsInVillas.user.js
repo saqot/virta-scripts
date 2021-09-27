@@ -3,7 +3,7 @@
 // @description Продление(пересоздание) инновации на виллах
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.4
+// @version 1.5
 // @include https://virtonomica.ru/vera/main/management_action/*/artefact/list
 // @include https://virtonomica.ru/vera/main/management_action/*/artefact/list#
 // @run-at document-idle
@@ -38,7 +38,7 @@ let run = async function () {
     }
     
     $td.append('' +
-        '<a class="u-t u-s upd-vills" href="" style="width: 140px; float: right;padding: 2px 5px !important;height: 30px !important;">Обновить виллы</a>' +
+        '<a class="upd-vills" href="" style="width: 160px; float: right;padding: 2px 5px; border: 1px solid #0184D0;">Обновить инновации вилл</a>' +
         '');
     const $btnUpdate = $td.find('.upd-vills');
     
@@ -233,89 +233,92 @@ let run = async function () {
         
         return new Promise(async (resolve) => {
             const vills = await getListVills(userID);
-            
             let all = vills.length;
-            let i = 0;
             
-            $btnUpdate.html(`Обновляем вилл: ${all}`)
+            $btnUpdate.html(`Обновляем виллы: ${all}`)
             
-            vills.map(async function (vill) {
-                const unitID = vill.id;
-                
-                let specialization = {
-                    '[L]': '^научный.*',        // Научный координационный центр
-                    '[Q]': '^качество.*',       // Качество производимой в регионе продукции
-                    '[S]': '.*электронной.*',   // Центр электронной коммерции
-                };
-                
-                const m = vill['name'].match(/\[(\w+)\]/gi);
-                let specMatch = (m && m[0] !== undefined) ? m[0] : null;
-                specMatch = (specMatch && specialization[specMatch] !== undefined) ? specialization[specMatch] : null
-                
-                
-                let slots = await getListSlots(unitID);
-                slots = await Promise.all(slots.map(async (slot) => {
-                    return await pareSlot(slot, unitID, specMatch);
-                }));
-                
-                // назначаем инновации
-                slots.map(async function (slot) {
-                    const artefactId = slot['art']['id'];
-                    
-                    if (artefactId === undefined || !artefactId) {
-                        return;
-                    }
-                    
-                    const art = vill['arts'].find(function (el) {
-                        return el['id'] === artefactId;
-                    });
-                    
-                    if (art === undefined) {
-                        // назначем для тех, кого уже нет
-                        await attachArt(unitID, slot['id'], slot['art']['id'])
-                    } else {
-                        // Политическая агитация - обновляем всегда
-                        if (art['ttl'] === '10') {
-                            await deleteArt(art['unit_id'], art['id'])
-                            await attachArt(unitID, slot['id'], slot['art']['id'])
-                        } else {
-                            if (parseInt(art['expires']) <= 30) {
-                                await deleteArt(unitID, art['id'])
-                                await attachArt(unitID, slot['id'], slot['art']['id'])
-                            }
-                        }
-                    }
-                    
-                });
-                
-                
-                i++;
-                $btnUpdate.html(`Обновляем ${i}/${all}`)
-                
-                if (i >= all) {
-                    consoleEcho(`Обновили вилл: ${i}`);
-                    
-                    setTimeout(function () {
-                        $btnUpdate.html(`Обновили вилл: ${i}`)
-                        
-                        setTimeout(function () {
-                            $btnUpdate.html(`Обновить виллы еще разок`)
-                            $btnUpdate.removeClass('disabled');
-                            
-                        }, 1000);
-                        
-                    }, 1000);
-                    
-                }
-                
-            });
-            
+            updateVill(0, all, vills);
             
             resolve(true);
         });
         
     }
     
+    function updateVill(n, all, vills) {
+        setTimeout(async () => {
+            let vill = vills[n];
+            if (vill === undefined) {
+                consoleEcho(`Обновили вилл: ${n}`);
+                
+                setTimeout(function () {
+                    $btnUpdate.html(`Обновили вилл: ${n}`)
+                    
+                    setTimeout(function () {
+                        $btnUpdate.html(`Обновили вилл: ${n} </br>Обновить виллы еще разок`)
+                        $btnUpdate.removeClass('disabled');
+                        
+                    }, 2000);
+                    
+                }, 500);
+                
+                
+                return;
+            }
+            
+            const unitID = vill.id;
+            
+            let specialization = {
+                '[L]': '^научный.*',        // Научный координационный центр
+                '[Q]': '^качество.*',       // Качество производимой в регионе продукции
+                '[S]': '.*электронной.*',   // Центр электронной коммерции
+            };
+            
+            const m = vill['name'].match(/\[(\w+)\]/gi);
+            let specMatch = (m && m[0] !== undefined) ? m[0] : null;
+            specMatch = (specMatch && specialization[specMatch] !== undefined) ? specialization[specMatch] : null
+            
+            
+            let slots = await getListSlots(unitID);
+            slots = await Promise.all(slots.map(async (slot) => {
+                return await pareSlot(slot, unitID, specMatch);
+            }));
+            
+            // назначаем инновации
+            slots.map(async function (slot) {
+                const artefactId = slot['art']['id'];
+                
+                if (artefactId === undefined || !artefactId) {
+                    return;
+                }
+                
+                const art = vill['arts'].find(function (el) {
+                    return el['id'] === artefactId;
+                });
+                
+                if (art === undefined) {
+                    // назначем для тех, кого уже нет
+                    await attachArt(unitID, slot['id'], slot['art']['id'])
+                } else {
+                    // Политическая агитация - обновляем всегда
+                    if (art['ttl'] === '10') {
+                        await deleteArt(art['unit_id'], art['id'])
+                        await attachArt(unitID, slot['id'], slot['art']['id'])
+                    } else {
+                        if (parseInt(art['expires']) <= 30) {
+                            await deleteArt(unitID, art['id'])
+                            await attachArt(unitID, slot['id'], slot['art']['id'])
+                        }
+                    }
+                }
+                
+            });
+            
+            
+            $btnUpdate.html(`Обновляем ${n + 1}/${all}`);
+            updateVill(n + 1, all, vills);
+            
+        }, 1000);
+    }
 }
 
 if (window.top === window) {
