@@ -3,7 +3,7 @@
 // @description Продление(пересоздание) инновации на виллах
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.2
+// @version 1.3
 // @include https://virtonomica.ru/vera/main/management_action/*/artefact/list
 // @include https://virtonomica.ru/vera/main/management_action/*/artefact/list#
 // @run-at document-idle
@@ -247,7 +247,7 @@ let run = async function () {
                 };
                 
                 const m = vill['name'].match(/\[(\w+)\]/gi);
-                let specMatch = m[0] !== undefined ? m[0] : null;
+                let specMatch = (m && m[0] !== undefined) ? m[0] : null;
                 specMatch = (specMatch && specialization[specMatch] !== undefined) ? specialization[specMatch] : null
                 
                 
