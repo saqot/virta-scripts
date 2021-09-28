@@ -3,7 +3,7 @@
 // @description Оптовое создание юнитов в виртономике.
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.5
+// @version 1.6
 // @include https://virtonomica.ru/vera/main/unit/create/*
 // @include https://virtonomica.ru/vera/main/unit/create/*#confirm-modal
 // @run-at document-idle
@@ -16,6 +16,17 @@ let run = function () {
 	$ = win.$;
 	
 	// ==================================================
+	let ver = '1.6';
+	
+	function consoleEcho(text, isRrror = false) {
+		const bg = isRrror === true ? '#af1a00' : '#3897c7'
+		console.log(`\n %c VIRTA::MCU / ${ver} %c ${text} \n\n`, 'color: #FFFFFF; background: #030307; padding:5px 0;', `color: #FFFFFF; background: ${bg}; padding:5px 0;`);
+	}
+	
+	consoleEcho('Оптовое создание юнитов в виртономике');
+	// ==================================================
+	
+	// ==================================================
 	function getUserID() {
 		const svHref = window.location.href;
 		const matches = svHref.match(/\/(\w+)\/main\/unit\/create\/(\d+)/);
@@ -24,9 +35,9 @@ let run = function () {
 	
 	const userID = getUserID();
 	if (!userID) {
-		console.error('userID не определен');
+		consoleEcho('userID не определен', true);
+		return;
 	}
-	console.log(`userID ${userID}`);
 	
 	let IS_PAUSE = false;
 	let LOOP_X = 0;
@@ -72,7 +83,7 @@ let run = function () {
 	
 	waitForElement(initMassCreate);
 	
-	function initMassCreate(el) {
+	function initMassCreate() {
 		// отслеживаем закрытие окна, что бы запустить мониторинг открытия
 		$('#confirm-modal').on('click', function (e) {
 			e.preventDefault();
@@ -129,7 +140,7 @@ let run = function () {
 				$btm.html(`Создать несколько`);
 			}
 			
-			if (cnt > 100) {
+			if (cnt > 1000) {
 				$btm.addClass('disabled');
 				$btm.html(`Максимум 100 можно`);
 			}
@@ -229,9 +240,6 @@ let run = function () {
 			district_id: UnitCreateWizard.get('district') ? UnitCreateWizard.get('district').id : 0,
 		};
 		
-		// setTimeout(function () {
-		// 	loopSend();
-		// }, 1000);
 		
 		$.ajax({
 			async      : true,
@@ -245,7 +253,6 @@ let run = function () {
 			global     : false,
 			dataType   : "json",
 			success    : function (res) {
-				console.log('unit ID', res);
 				setTimeout(function () {
 					loopSend();
 				}, 1000);
