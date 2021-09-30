@@ -5,6 +5,7 @@
 // @author SAQOT
 // @version 1.1
 // @include https://virtonomica.ru/vera/main/unit/view/*
+// @run-at document-idle
 // ==/UserScript==
 
 /* global $, unsafeWindow, ajaxTools */
