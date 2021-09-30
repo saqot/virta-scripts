@@ -24,7 +24,7 @@ let run = function () {
     
     consoleEcho('Помощь при объединении юнитов');
     
-    let $btns = $('.page-inline-menu button[data-target="tools-modal"]');
+    let $btns = $('button[data-target="tools-modal"]');
     
     $btns.on('click', function () {
         waitUnitMergeTab(initMergeUnitns);
