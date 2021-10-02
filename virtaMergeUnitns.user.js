@@ -24,6 +24,13 @@ let run = function () {
     
     consoleEcho('Помощь при объединении юнитов');
     
+    const m = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)/);
+    const unitID = m[2];
+    if (!unitID) {
+        consoleEcho('unitID не определен', true);
+        return;
+    }
+    
     let $btns = $('button[data-target="tools-modal"]');
     
     $btns.on('click', function () {
@@ -80,17 +87,17 @@ let run = function () {
         $btnSubmit.on('click', function (e) {
             e.preventDefault();
             $('form[name=unit-merge]').submit();
-            
+
         });
-        
+
         ajaxTools.ajaxForm('form[name=unit-merge]',
             function () {
                 return true;
             },
             function () {
                 $('#unit-info').removeAttr('data-loaded');
-                ajaxTools.loadContentStart("//virtonomica.ru/api/vera/main/unit/view?id=10185890&format=html&app=adapter_vrt", 'unit-info', 0, false);
-                
+                ajaxTools.loadContentStart(`//virtonomica.ru/api/vera/main/unit/view?id=${unitID}&format=html&app=adapter_vrt`, 'unit-info', 0, false);
+
                 setTimeout(function () {
                     $('.modal-backdrop').remove();
                     waitUnitMergeTab(initMergeUnitns);
