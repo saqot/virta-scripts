@@ -3,7 +3,7 @@
 // @description Доп. стата при заказе товара
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.3
+// @version 1.4
 // @include https://virtonomica.ru/vera/main/unit/view/*/supply
 // @include https://virtonomica.ru/vera/main/unit/view/*/supply#confirm-modal
 // @include https://virtonomica.ru/vera/main/unit/view/*/supply#materials-modal
@@ -20,7 +20,7 @@ let run = function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '1.3';
+    let ver = '1.4';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
