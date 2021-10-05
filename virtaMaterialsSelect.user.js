@@ -7,6 +7,9 @@
 // @include https://virtonomica.ru/vera/main/unit/view/*/supply
 // @include https://virtonomica.ru/vera/main/unit/view/*/supply#confirm-modal
 // @include https://virtonomica.ru/vera/main/unit/view/*/supply#materials-modal
+// @include https://virtonomica.ru/vera/main/unit/view/*/trading_hall
+// @include https://virtonomica.ru/vera/main/unit/view/*/trading_hall#confirm-modal
+// @include https://virtonomica.ru/vera/main/unit/view/*/trading_hall#materials-modal
 // @run-at document-idle
 // ==/UserScript==
 
@@ -27,15 +30,21 @@ let run = function () {
     consoleEcho('Доп. стата при заказе товара');
     // ==================================================
     
+    const matches = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)\/(supply|trading_hall)/);
+    const unitID = matches[2];
+    if (!unitID) {
+        consoleEcho('unitID не определен', true);
+        return;
+    }
+    
     let timer = null;
     
-    function waitForElement(callback) {
+    function waitForTable(callback) {
         let time = 0;
         if (timer !== null) {
             return;
         }
         timer = setInterval(function () {
-            
             let el = document.getElementById('materials-modal');
             if (el) {
                 if ($(el).is(':visible') === true) {
@@ -43,19 +52,11 @@ let run = function () {
                     timer = null;
                     callback(el);
                 }
-                
             }
             time += 100;
         }, 100);
     }
     
-    const matches = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)\/supply/);
-    const unitID = matches[2];
-    if (!unitID) {
-        consoleEcho('unitID не определен', true);
-        return;
-    }
-    consoleEcho(`unitID ${unitID}`);
     
     function initRun(el) {
         const $modal = $(el);
@@ -71,7 +72,7 @@ let run = function () {
         $modal.on('click', function (e) {
             setTimeout(function () {
                 if (!$modal.is(':visible')) {
-                    waitForElement(initRun);
+                    waitForTable(initRun);
                 }
             }, 1000);
         });
@@ -137,7 +138,7 @@ let run = function () {
     }
     
     
-    waitForElement(initRun);
+    waitForTable(initRun);
     
 }
 
