@@ -5,11 +5,9 @@
 // @author SAQOT
 // @version 1.4
 // @include https://virtonomica.ru/vera/main/unit/view/*/supply
-// @include https://virtonomica.ru/vera/main/unit/view/*/supply#confirm-modal
-// @include https://virtonomica.ru/vera/main/unit/view/*/supply#materials-modal
+// @include https://virtonomica.ru/vera/main/unit/view/*/supply#*
 // @include https://virtonomica.ru/vera/main/unit/view/*/trading_hall
-// @include https://virtonomica.ru/vera/main/unit/view/*/trading_hall#confirm-modal
-// @include https://virtonomica.ru/vera/main/unit/view/*/trading_hall#materials-modal
+// @include https://virtonomica.ru/vera/main/unit/view/*/trading_hall#*
 // @run-at document-idle
 // ==/UserScript==
 
