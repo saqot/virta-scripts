@@ -74,7 +74,6 @@ let run = async function () {
                     global     : false,
                     dataType   : "json",
                     success    : function (res) {
-                        console.log('res', res);
                         dataUnits = res;
                         resolve(res);
                     },
