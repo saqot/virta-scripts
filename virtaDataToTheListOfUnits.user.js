@@ -3,7 +3,7 @@
 // @description Дополнительные данные в список юнитов
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.2
+// @version 1.3
 // @include https://virtonomica.ru/vera/main/company/view/*/unit_list
 // @run-at document-idle
 // ==/UserScript==
@@ -16,7 +16,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '1.2';
+    let ver = '1.3';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -56,34 +56,48 @@ let run = async function () {
         });
     }
     
+    let dataUnits = {};
+    
     function getDataUnits() {
         return new Promise((resolve) => {
-            $.ajax({
-                async      : true,
-                type       : 'GET',
-                url        : `https://virtonomica.ru/api/vera/main/company/report/units/all?id=${userID}&pagesize=5000&format=json`,
-                crossDomain: true,
-                xhrFields  : {
-                    withCredentials: true,
-                },
-                global     : false,
-                dataType   : "json",
-                success    : function (res) {
-                    resolve(res);
-                },
-                error      : function (a, b, c) {
-                    console.error(a, b, c);
-                },
-            });
+            if (Object.keys(dataUnits).length) {
+                resolve(dataUnits);
+            } else {
+                $.ajax({
+                    async      : true,
+                    type       : 'GET',
+                    url        : `https://virtonomica.ru/api/vera/main/company/report/units/all?id=${userID}&pagesize=5000&format=json`,
+                    crossDomain: true,
+                    xhrFields  : {
+                        withCredentials: true,
+                    },
+                    global     : false,
+                    dataType   : "json",
+                    success    : function (res) {
+                        console.log('res', res);
+                        dataUnits = res;
+                        resolve(res);
+                    },
+                    error      : function (a, b, c) {
+                        console.error(a, b, c);
+                    },
+                });
+            }
         });
     }
     
     function abbreviateNumber(value) {
         let number = Math.abs(Number(value));
         
-        if (Number(number) >= 1.0e+9) {return (number / 1.0e+9).toFixed(2) + ` B`;}
-        if (Number(number) >= 1.0e+6) {return (number / 1.0e+6).toFixed(2) + ` M`;}
-        if (Number(number) >= 1.0e+3) {return (number / 1.0e+3).toFixed(2) + ` K`;}
+        if (Number(number) >= 1.0e+9) {
+            return (number / 1.0e+9).toFixed(2) + ` B`;
+        }
+        if (Number(number) >= 1.0e+6) {
+            return (number / 1.0e+6).toFixed(2) + ` M`;
+        }
+        if (Number(number) >= 1.0e+3) {
+            return (number / 1.0e+3).toFixed(2) + ` K`;
+        }
         
         return number;
     }
@@ -93,7 +107,7 @@ let run = async function () {
         
         $('table thead tr').append(`<th class="many text-right" style="">Прибыль</th>`);
         
-        $TRs.each(function() {
+        $TRs.each(function () {
             let $el = $(this);
             let $rowMany = $el.find('td.many');
             if (!$rowMany.length) {
@@ -103,7 +117,7 @@ let run = async function () {
             
             let unitId = $el.attr('data-id');
             let elData = data[unitId];
-
+            
             if (elData !== undefined) {
                 let cash = elData['cashflow'];
                 let classColor = 'text-success';
@@ -115,7 +129,7 @@ let run = async function () {
                     cash = '+$' + abbreviateNumber(cash);
                 }
                 
-                $rowMany.html( `<span class="${classColor}"><span class="mnegative2">${cash}</span></span>` );
+                $rowMany.html(`<span class="${classColor}"><span class="mnegative2">${cash}</span></span>`);
             }
         });
     }
@@ -133,11 +147,10 @@ let run = async function () {
     }
     
     
-    
     async function initRun(el) {
         let $btnSorts = $(el).find('thead button');
-
-        $btnSorts.on('click', function (e) {
+        
+        $btnSorts.on('click', function () {
             setTimeout(function () {
                 waitForTable(initRun);
             }, 100);
@@ -149,7 +162,7 @@ let run = async function () {
     
     
     let $btnFilters = $('#unit-class-filter button');
-    $btnFilters.on('click', function (e) {
+    $btnFilters.on('click', function () {
         setTimeout(function () {
             waitForTable(initRun);
         }, 1000);
@@ -164,9 +177,8 @@ let run = async function () {
     }
     
     
-    
     waitForTable(initRun);
- 
+    
 }
 
 if (window.top === window) {
