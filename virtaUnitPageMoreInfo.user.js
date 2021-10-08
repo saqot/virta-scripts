@@ -94,7 +94,7 @@ let run = async function () {
     const unit = await getUnitData(unitID);
     const kvala = await getUserKvala(unit['user_id']);
 
-    $el = $el.find('span');
+    $el = $el.find('span.mono');
     const v = $el.text().trim();
     
     
