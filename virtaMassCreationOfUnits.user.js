@@ -3,7 +3,7 @@
 // @description Оптовое создание юнитов в виртономике.
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.6
+// @version 1.7
 // @include https://virtonomica.ru/vera/main/unit/create/*
 // @include https://virtonomica.ru/vera/main/unit/create/*#confirm-modal
 // @run-at document-idle
@@ -16,7 +16,7 @@ let run = function () {
 	$ = win.$;
 	
 	// ==================================================
-	let ver = '1.6';
+	let ver = '1.7';
 	
 	function consoleEcho(text, isRrror = false) {
 		const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -39,6 +39,7 @@ let run = function () {
 		return;
 	}
 	
+	let LIMIT = 1000;
 	let IS_PAUSE = false;
 	let LOOP_X = 0;
 	let LOOP_ALL = 0;
@@ -140,9 +141,9 @@ let run = function () {
 				$btm.html(`Создать несколько`);
 			}
 			
-			if (cnt > 1000) {
+			if (cnt > LIMIT) {
 				$btm.addClass('disabled');
-				$btm.html(`Максимум 100 можно`);
+				$btm.html(`Максимум ${LIMIT} можно`);
 			}
 		});
 		
@@ -252,7 +253,7 @@ let run = function () {
 			data       : data_,
 			global     : false,
 			dataType   : "json",
-			success    : function (res) {
+			success    : function () {
 				setTimeout(function () {
 					loopSend();
 				}, 1000);
