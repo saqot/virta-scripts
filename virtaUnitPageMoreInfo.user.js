@@ -14,6 +14,12 @@ let run = async function () {
     let win = (typeof (unsafeWindow) != 'undefined' ? unsafeWindow : top.window);
     $ = win.$;
     
+    // проверка на точность соответсвия страницы
+    const t = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)$/)
+    if (!t) {
+        return;
+    }
+    
     // ==================================================
     let ver = '1.2';
     
@@ -33,7 +39,7 @@ let run = async function () {
         return;
     }
     
-    let $el =  $('li:contains("Квалификация игрока")')
+    let $el = $('li:contains("Квалификация игрока")')
     if ($el.length <= 0) {
         consoleEcho('Элемент Квалификация игрока не нашли. Останавливаемся');
         return;
@@ -93,7 +99,7 @@ let run = async function () {
     
     const unit = await getUnitData(unitID);
     const kvala = await getUserKvala(unit['user_id']);
-
+    
     $el = $el.find('span.mono');
     const v = $el.text().trim();
     
