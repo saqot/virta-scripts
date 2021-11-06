@@ -3,7 +3,7 @@
 // @description Дополнительные данные на странице юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.2
+// @version 1.3
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -21,7 +21,7 @@ let run = async function () {
     }
     
     // ==================================================
-    let ver = '1.2';
+    let ver = '1.3';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'

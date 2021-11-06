@@ -3,7 +3,7 @@
 // @description Очистка кеша юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.1
+// @version 1.2
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -14,8 +14,14 @@ let run = async function () {
     let win = (typeof (unsafeWindow) != 'undefined' ? unsafeWindow : top.window);
     $ = win.$;
     
+    // проверка на точность соответсвия страницы
+    const t = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)$/)
+    if (!t) {
+        return;
+    }
+    
     // ==================================================
-    let ver = '1.1';
+    let ver = '1.2';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
