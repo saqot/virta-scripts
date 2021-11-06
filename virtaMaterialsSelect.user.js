@@ -124,9 +124,10 @@ let run = function () {
             
             getCityId(unitID, function (cityId) {
                 getMarketSize(productID, cityId, function (marketSize) {
+                    let $maxSale = ((marketSize*1)*0.85).toFixed();
                     $tbody.append(`<tr>
 						<td><strong>Объем рынка</strong></td>
-						<td colspan="3">${marketSize.toLocaleString('ru')}</td>
+						<td colspan="3">${(marketSize*1).toLocaleString('ru')} ( <span class="mnegative">max ${($maxSale*1).toLocaleString('ru')}</span> )</td>
 					</tr>`);
                 });
             });
