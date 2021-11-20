@@ -1,9 +1,10 @@
 // ==UserScript==
-// @name VIRTA::Clear Cache Unit
-// @description Очистка кеша юнита
+// @name VIRTA::Unit Dop Operations
+// @description - Очистка кеша юнита
+// @description - Удаление юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.2
+// @version 1.5
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -14,21 +15,15 @@ let run = async function () {
     let win = (typeof (unsafeWindow) != 'undefined' ? unsafeWindow : top.window);
     $ = win.$;
     
-    // проверка на точность соответсвия страницы
-    const t = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)$/)
-    if (!t) {
-        return;
-    }
-    
     // ==================================================
-    let ver = '1.2';
+    let ver = '1.5';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
-        console.log(`\n %c VIRTA::CCH / ${ver} %c ${text} \n\n`, 'color: #FFFFFF; background: #030307; padding:5px 0;', `color: #FFFFFF; background: ${bg}; padding:5px 0;`);
+        console.log(`\n %c VIRTA::UDO / ${ver} %c ${text} \n\n`, 'color: #FFFFFF; background: #030307; padding:5px 0;', `color: #FFFFFF; background: ${bg}; padding:5px 0;`);
     }
     
-    consoleEcho('Очистка кеша юнита');
+    consoleEcho('Unit Dop Operations');
     
     // ==================================================
     
@@ -82,22 +77,46 @@ let run = async function () {
         });
     }
     
-    let $icon;
+    function deleteUnit(unitID, token) {
+        return new Promise((resolve) => {
+            $.ajax({
+                async      : true,
+                type       : 'POST',
+                url        : 'https://virtonomica.ru/api/vera/main/unit/destroy?format=json&app=adapter_vrt',
+                crossDomain: true,
+                data       : {
+                    id   : unitID,
+                    token: token,
+                },
+                success    : function (res) {
+                    resolve(res);
+                },
+                error      : function (jqXHR, textStatus, error) {
+                    consoleEcho(`FAIL (ajax) {textStatus=${textStatus} , error=${error}}`, true);
+                },
+            });
+        });
+    }
     
-    const $blockNew = $('.page-inline-menu > div');
+    let $iconClearCache;
+    let $iconDelete;
+    
+    const $blockNew = $('ul.tabu');
     if ($blockNew.length) {
-        $icon = $(`<a href="" class="item item-width- clear-cache-n"><i class="fa fa-trash"></i><span>Очистить кеш</span></a>`);
-        $blockNew.append($icon);
+        $iconClearCache = $(`<li><a href="" data-name="itour-tab-unit-view--supply pull-right">Очистить кеш</a></li>`);
+        $blockNew.append($iconClearCache);
+        $iconDelete = $(`<li><a href="" data-name="itour-tab-unit-view--supply pull-right">Удалить юнит</a></li>`);
+        $blockNew.append($iconDelete);
     } else {
         const $blockOld = $('#unit_subtab');
         if ($blockOld.length) {
-            $icon = $(`<div><a href="" class="clear-cache-o"> <i class="fa fa-trash"></i> Очистить кеш</a></div>`);
-            $blockOld.append($icon);
+            $iconClearCache = $(`<div><a href="" class="clear-cache-o"> <i class="fa fa-trash"></i> Очистить кеш</a></div>`);
+            $blockOld.append($iconClearCache);
         }
     }
     
-    if ($icon) {
-        $icon.off('click').on('click', async function (e) {
+    if ($iconClearCache) {
+        $iconClearCache.off('click').on('click', async function (e) {
             e.preventDefault();
         
             const token = await getToken();
@@ -108,21 +127,43 @@ let run = async function () {
             }, 100);
         
         });
+    }
     
+    if ($iconDelete) {
+        $iconDelete.off('click').on('click', async function (e) {
+            e.preventDefault();
     
-        let sheet = document.createElement('style')
-        sheet.innerHTML = `
-        .clear-cache-n i.fa {
+            let isConfirm = confirm('Точно удалить юнит ?');
+            if (isConfirm) {
+                const token = await getToken();
+                await deleteUnit(unitID, token);
+    
+                setTimeout(function () {
+                    window.location.href = `https://virtonomica.ru/vera/main/user/privat/headquarters`;
+                }, 100);
+            }
+            
+        });
+    }
+    
+    let sheet = document.createElement('style')
+    sheet.innerHTML = `
+        .vi-icon i.fa {
             padding: 5px 0px;
-            height: 32px;
-            margin: 0 auto 2px auto;
+            height: 25px;
+            margin: 7px auto 2px auto;
             display: block;
             font-size: 24px;
-            color: #888;
+            color: #105b88;
         }
+        .page-inline-menu .menu-container .item {
+            width: unset;
+            border: 1px solid #d9d8d8;
+            padding: 5px;
+        }
+
         `;
-        document.body.appendChild(sheet);
-    }
+    document.body.appendChild(sheet);
 
     
 }
