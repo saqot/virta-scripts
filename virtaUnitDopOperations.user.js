@@ -4,7 +4,7 @@
 // @description - Удаление юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.5
+// @version 1.6
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -16,7 +16,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '1.5';
+    let ver = '1.6';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
