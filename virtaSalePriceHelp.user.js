@@ -3,7 +3,7 @@
 // @description Помощь при работе со страницей сбыта у складов
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.1
+// @version 1.3
 // @include https://virtonomica.ru/*/main/unit/view/*/sale
 // @include https://virtonomica.ru/*/main/unit/view/*/sale#*
 // @include https://virtonomica.ru/*/main/unit/view/*/sale?*
@@ -17,7 +17,7 @@ let run = function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '1.1';
+    let ver = '1.3';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -39,17 +39,43 @@ let run = function () {
         return;
     }
     
+    function setStopSaleNull()
+    {
+        const $rows = $(".sales-cards .item").not(".is_empty").find('.row');
+
+        $rows.each(function () {
+            const $row = $(this);
+
+            const $inputPrice = $row.find("input[name=price]");
+            const $selectOffer = $row.find("select[name=offer_constraint]");
+            let cnt = $row.find('div').eq(1).find('tbody tr').eq(0).find('td').eq(1).html();
+            cnt = parseInt(cnt.replace(/&nbsp;/gi, ''));
+            if (!cnt) {
+                $inputPrice.val('0').addClass('bg-danger').trigger("change");
+                $selectOffer.val(0).addClass('danger').trigger("change");
+    
+                const $fieldset = $row.parent().find("fieldset");
+                if ($fieldset.length) {
+                    $fieldset.hide();
+                }
+                
+                const $button = $row.find('button.btn-success');
+                $button.trigger("click");
+            }
+        });
+    }
+    
     let $LINK_INFO = null;
     let $LINK_ICON = null;
     
     function setMinPrice() {
         $LINK_ICON.show();
         $LINK_INFO.addClass('disabled');
-        
-        const $rows = $('.sales-cards .row');
+    
+        const $rows = $(".sales-cards .item").not(".is_empty").find('.row');
         const cntAll = $rows.length;
         let cntCur = 0;
-        $rows.each(async function (i) {
+        $rows.each(async function () {
             
             const $row = $(this);
             const $form = $row.find('form');
@@ -187,7 +213,7 @@ let run = function () {
         $('#main-tab>.row>div').prepend($block);
 
         
-        const $link = $(`<a href="" class="btn-link action_get-min-price"><span class="fa fa-circle-o-notch fa-spin" style="display: none"></span> <span class="info">Получить цены</span></a>`);
+        const $link = $(`<a href="" class="btn-link"><span class="fa fa-circle-o-notch fa-spin" style="display: none"></span> <span class="info">Получить цены</span></a>`);
         $LINK_INFO = $link.find('.info');
         $LINK_ICON = $link.find('.fa');
         
@@ -200,8 +226,16 @@ let run = function () {
         });
         
         $block.append($link);
-        
-
+    
+    
+        const $linkStopSaleNull = $(`<a href="" class="btn-link"><span class="info">Снять с продажи пустые слоты</span></a>`);
+        $linkStopSaleNull.on('click', function (e) {
+            e.preventDefault();
+    
+            setStopSaleNull();
+        });
+        $block.append('<span> · </span>');
+        $block.append($linkStopSaleNull);
         
     }
     
