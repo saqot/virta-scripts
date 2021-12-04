@@ -3,7 +3,7 @@
 // @description Помощь при работе со страницей сбыта у складов
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.3
+// @version 1.4
 // @include https://virtonomica.ru/*/main/unit/view/*/sale
 // @include https://virtonomica.ru/*/main/unit/view/*/sale#*
 // @include https://virtonomica.ru/*/main/unit/view/*/sale?*
@@ -17,7 +17,7 @@ let run = function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '1.3';
+    let ver = '1.4';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -123,7 +123,7 @@ let run = function () {
                 $btnSetPtrice.on('click', function (e) {
                     e.preventDefault();
                     let price_ = $(this).attr("data-price");
-                      $inputPrice.val(price_);
+                      $inputPrice.val(price_).trigger("change");
                 });
                 
                 const $br =  $form.find('br');
