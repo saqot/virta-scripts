@@ -5,7 +5,7 @@
 // @description - Завоз все ассортимента товара с указанного склада
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.9
+// @version 2.0
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -17,7 +17,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '1.9';
+    let ver = '2.0';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -352,9 +352,9 @@ let run = async function () {
             });
         }
         
-        let isBuyReplaceItem = false
-        let isBuyOneItem = true
-        let buyProcItem = 0
+        let isBuyReplaceItem = false;
+        let isBuyOneItem = true;
+        let buyProcItem = 80;
         
         async function buyTovars($modal, storeId, tovarIds) {
             let buyProc = 0
@@ -458,10 +458,10 @@ let run = async function () {
                 }
                 
                 
-                const $tdIco = $(`<td class="products text-middle"></td>`);
+                const $tdIco = $(`<td class="products text-middle vista-products"></td>`);
                 Object.entries(v.products).forEach(([kk, vv]) => {
                     const ico = `/pub/app/virtonomica/product/${vv.symbol}.gif`;
-                    $tdIco.append(`<i class="ico brand" style="background-image:url(${ico})" title="${vv.name}"></i>`);
+                    $tdIco.append(`<i class="ico brand vista-ico-brand" style="background-image:url(${ico})" title="${vv.name}"></i>`);
                 });
                 
                 const $btnBuy = $(`<button class="btn btn-xs btn-success btn-store-buy" data-storeId="${v.id}" ><i class="fa fa-truck"></i></button>`);
@@ -501,7 +501,7 @@ let run = async function () {
                 '       </div>' +
                 '       <div class="col-sm-4 "> Количество товара в % от объема рынка:' +
                 '           <div class="edit_field edit_field_compact margin-5-top">' +
-                '               <input type="text" name="proc-item" value="0" class="form-control text-right virQuantMask proc-item" inputmode="numeric" style="text-align: right;">' +
+                `               <input type="text" name="proc-item" value="${buyProcItem}" class="form-control text-right virQuantMask proc-item" inputmode="numeric" style="text-align: right;">` +
                 '           </div>' +
                 '       </div>' +
                 '       <div class="col-sm-3 process-block" style="display: none">' +
@@ -562,6 +562,21 @@ let run = async function () {
         
     }
     
+    let sheet = document.createElement('style')
+    sheet.innerHTML = `
+        .vista-products {
+            width: 50% !important;
+            max-width: 50% !important;
+        }
+       .vista-ico-brand {
+            border: 1px solid #eee;
+            margin: 1px;
+            width: 20px !important;
+            height: 20px !important;
+        }
+
+        `;
+    document.body.appendChild(sheet);
 }
 
 if (window.top === window) {
