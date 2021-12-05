@@ -5,7 +5,7 @@
 // @description - Завоз все ассортимента товара с указанного склада
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.0
+// @version 2.1
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -17,7 +17,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '2.0';
+    let ver = '2.1';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -34,6 +34,29 @@ let run = async function () {
         consoleEcho('unitID не определен', true);
         return;
     }
+    
+    function getUserInfo() {
+        return new Promise((resolve) => {
+            $.ajax({
+                async      : true,
+                type       : 'GET',
+                url        : `https://virtonomica.ru/api/vera/main/user/info`,
+                crossDomain: true,
+                xhrFields  : {
+                    withCredentials: true,
+                },
+                global     : false,
+                dataType   : "json",
+                success    : function (res) {
+                    resolve(res);
+                },
+                error      : function (a, b, c) {
+                    console.error(a, b, c);
+                },
+            });
+        });
+    }
+    const userInfo = await getUserInfo();
     
     let cityId = null;
     
@@ -137,10 +160,16 @@ let run = async function () {
     
     const $blockNew = $('ul.tabu');
     if ($blockNew.length) {
-        $iconClearCache = $(`<li><a href="" data-name="itour-tab-unit-view--supply pull-right">Очистить кеш</a></li>`);
+        $iconClearCache = $(`<li><a href="">Очистить кеш</a></li>`);
         $blockNew.append($iconClearCache);
-        $iconDelete = $(`<li><a href="" data-name="itour-tab-unit-view--supply pull-right">Удалить юнит</a></li>`);
-        $blockNew.append($iconDelete);
+        
+        if (userInfo['company_id'] === 10090070) {
+            $iconDelete = $(`<li><a href="" >Удалить юнит</a></li>`);
+            $blockNew.append($iconDelete);
+        } else {
+            $blockNew.append($(`<li><a href="" >Удалить нехрен все :)</a></li>`));
+        }
+        
     } else {
         const $blockOld = $('#unit_subtab');
         if ($blockOld.length) {
@@ -221,30 +250,6 @@ let run = async function () {
                 });
             });
         }
-        
-        function getUserInfo() {
-            return new Promise((resolve) => {
-                $.ajax({
-                    async      : true,
-                    type       : 'GET',
-                    url        : `https://virtonomica.ru/api/vera/main/user/info`,
-                    crossDomain: true,
-                    xhrFields  : {
-                        withCredentials: true,
-                    },
-                    global     : false,
-                    dataType   : "json",
-                    success    : function (res) {
-                        resolve(res);
-                    },
-                    error      : function (a, b, c) {
-                        console.error(a, b, c);
-                    },
-                });
-            });
-        }
-        
-        const userInfo = await getUserInfo();
         
         function getStores() {
             return new Promise((resolve) => {
