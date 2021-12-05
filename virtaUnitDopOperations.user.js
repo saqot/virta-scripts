@@ -5,7 +5,7 @@
 // @description - Завоз все ассортимента товара с указанного склада
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.8
+// @version 1.9
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -17,7 +17,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '1.8';
+    let ver = '1.9';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -396,6 +396,13 @@ let run = async function () {
                 cntCur++;
                 $prInfo.html(`Закупаем ${cntCur} из ${cntAll}`);
                 const offer = await getOffer(storeId, r.product_id);
+    
+                if (!offer) {
+                    if (cntCur >= cntAll) {
+                        await buyTovarsEnd();
+                    }
+                    continue;
+                }
                 
                 if (!isBuyReplaceItem) {
                     if (offer.contract !== undefined) {
