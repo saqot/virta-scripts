@@ -5,7 +5,7 @@
 // @description - Завоз все ассортимента товара с указанного склада
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.1
+// @version 2.2
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -17,7 +17,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '2.1';
+    let ver = '2.2';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -162,8 +162,8 @@ let run = async function () {
     if ($blockNew.length) {
         $iconClearCache = $(`<li><a href="">Очистить кеш</a></li>`);
         $blockNew.append($iconClearCache);
-        
-        if (userInfo['company_id'] === 10090070) {
+
+        if (userInfo['company_id'] === '10090070') {
             $iconDelete = $(`<li><a href="" >Удалить юнит</a></li>`);
             $blockNew.append($iconDelete);
         } else {
