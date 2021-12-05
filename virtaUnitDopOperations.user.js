@@ -468,7 +468,7 @@ let run = async function () {
                 
                 $tbody.append($(`<tr data-id="${v.id}">`)
                     .append($(`<td class="text-middle geo_info" style="color: gray;"><i class="ico pull-left flag-${v.country_symbol}-small" title="${v.country_name}"></i><div class="cityPlusID">${v.country_name} / ${v.city_name}<br><span>${v.id}</span></div></td>`))
-                    .append($(`<td class="unit_info"><strong>${v.name}</strong><br/><span class="font-blue-oleo">${v.size} / ${v.square / 1000000} млн кв. м</span></td>`))
+                    .append($(`<td class="unit_info"><a href="//virtonomica.ru/vera/main/unit/view/${v.id}">${v.name}</a><br/><span class="font-blue-oleo">${v.size} / ${v.square / 1000000} млн кв. м</span></td>`))
                     .append($tdIco)
                     .append($(`<td class="text-right text-middle trans-buttons"></td>`)
                         .append($btnBuy)
