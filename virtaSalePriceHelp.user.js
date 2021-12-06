@@ -3,7 +3,7 @@
 // @description Помощь при работе со страницей сбыта у складов
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.4
+// @version 1.5
 // @include https://virtonomica.ru/*/main/unit/view/*/sale
 // @include https://virtonomica.ru/*/main/unit/view/*/sale#*
 // @include https://virtonomica.ru/*/main/unit/view/*/sale?*
@@ -17,7 +17,7 @@ let run = function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '1.4';
+    let ver = '1.5';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -39,13 +39,12 @@ let run = function () {
         return;
     }
     
-    function setStopSaleNull()
-    {
+    function setStopSaleNull() {
         const $rows = $(".sales-cards .item").not(".is_empty").find('.row');
-
+        
         $rows.each(function () {
             const $row = $(this);
-
+            
             const $inputPrice = $row.find("input[name=price]");
             const $selectOffer = $row.find("select[name=offer_constraint]");
             let cnt = $row.find('div').eq(1).find('tbody tr').eq(0).find('td').eq(1).html();
@@ -53,7 +52,7 @@ let run = function () {
             if (!cnt) {
                 $inputPrice.val('0').addClass('bg-danger').trigger("change");
                 $selectOffer.val(0).addClass('danger').trigger("change");
-    
+                
                 const $fieldset = $row.parent().find("fieldset");
                 if ($fieldset.length) {
                     $fieldset.hide();
@@ -71,7 +70,8 @@ let run = function () {
     function setMinPrice() {
         $LINK_ICON.show();
         $LINK_INFO.addClass('disabled');
-    
+        
+        //const $rows = $(".sales-cards .item").not(".is_empty").find('.row').first();
         const $rows = $(".sales-cards .item").not(".is_empty").find('.row');
         const cntAll = $rows.length;
         let cntCur = 0;
@@ -85,7 +85,7 @@ let run = function () {
             let $info = $row.find('div').eq(1).find('tbody tr').eq(1);
             let quality = $info.find('td').eq(1).html();
             let price = $info.find('td').eq(2).html();
-
+            
             quality = parseFloat(quality);
             if (quality === 'NaN') {
                 quality = null;
@@ -96,13 +96,14 @@ let run = function () {
             }
             if (quality) {
                 let minPrice = await getMinPriceProduct(productId, quality, price);
+                
                 let $linkShowTable = $(`<button class="popovers link" data-trigger="hover" data-placement="right" data-content="Маркетинговый отчёт" data-link="https://virtonomica.ru/api/${realm}/main/index?id=10264116&product_id=${productId}&brandname_id=0&quantity=0&free_for_buy=1&tpl=unit/supply/materials-select&ajax=1&app=adapter_vrt&format=html&free_for_buy=10&sort=total_cost/asc&quality_from=1&quality_to=${quality}" data-target="marketing-report-offers" data-bind="yes" data-original-title="" title=""><i class="fa fa-eye"></i></button>`);
                 $linkShowTable.on('click', function (e) {
                     e.preventDefault();
                     let d = $(this);
                     let val = d.val() || d.attr("data-value");
                     let url = (d.attr("data-link") || d.attr("action") || d.attr("href")) + "&" + d.attr("data-param") + "=" + val;
-                        let target = d.attr("data-target");
+                    let target = d.attr("data-target");
                     
                     ajaxTools.loadContentStart({
                         url       : url,
@@ -112,25 +113,24 @@ let run = function () {
                         fill_model: d.attr("data-model"),
                     });
                 });
-    
+                
                 const $btnRow = $(`<div class="btn-group btn-group-xs btn-group-solid normal">
 								<a class="btn btn-default btn-xs action_set-ptrice" data-price="${(minPrice.price - (minPrice.price * (10 / 100))).toFixed(0)}">-10%</a>
 								<a class="btn btn-default btn-xs action_set-ptrice" data-price="${minPrice.price}">100%</a>
 								<a class="btn btn-default btn-xs action_set-ptrice" data-price="${(minPrice.price + (minPrice.price * (10 / 100))).toFixed(0)}">+10%</a>
 							</div>`)
-    
-                const $btnSetPtrice =  $btnRow.find('.action_set-ptrice');
+                
+                const $btnSetPtrice = $btnRow.find('.action_set-ptrice');
                 $btnSetPtrice.on('click', function (e) {
                     e.preventDefault();
                     let price_ = $(this).attr("data-price");
-                      $inputPrice.val(price_).trigger("change");
+                    $inputPrice.val(price_).trigger("change");
                 });
                 
-                const $br =  $form.find('br');
+                const $br = $form.find('br');
                 $br.before($linkShowTable);
-                $br.before(`<span class="text-muted" style="margin: 0 5px;">${minPrice.price.toLocaleString('ru')}</span><sup class="text-muted">(${minPrice.quality })</sup>`);
+                $br.before(`<span class="text-muted" style="margin: 0 5px;">${minPrice.price.toLocaleString('ru')}</span><sup class="text-muted">(${minPrice.quality})</sup>`);
                 $br.before($btnRow);
-    
                 
                 
             } else {
@@ -154,10 +154,12 @@ let run = function () {
     function getMinPriceProduct(productId, qualityTo, priceTo) {
         return new Promise((resolve) => {
             let qualityFrom = parseInt(qualityTo - (qualityTo * (40 / 100)));
+            let qualityTo_ = parseInt(qualityTo + (qualityTo * (40 / 100)));
+            let url = `https://virtonomica.ru/api/${realm}/main/unit/supply/offers?ajax=1format=json&id=${unitID}&type=product&product_id=${productId}&total_price_from=1&quality_from=${qualityFrom}&quality_to=${qualityTo_}&free_for_buy=100&pagesize=20&sort=total_cost/asc`;
             $.ajax({
                 async      : true,
                 type       : 'GET',
-                url        : `https://virtonomica.ru/api/${realm}/main/unit/supply/offers?ajax=1format=json&id=${unitID}&type=product&product_id=${productId}&total_price_from=1&quality_from=${qualityFrom}&quality_to=${qualityTo}&free_for_buy=100&pagesize=10&sort=total_cost/asc`,
+                url        : url,
                 crossDomain: true,
                 xhrFields  : {
                     withCredentials: true,
@@ -165,40 +167,48 @@ let run = function () {
                 global     : false,
                 dataType   : "json",
                 success    : function (r) {
-                   setTimeout(function () {
+                    setTimeout(function () {
                         let minPrice = {
                             'qualityTo': qualityTo,
                             'quality'  : 0,
                             'price'    : 0,
-                            'q'    : 0,
+                            'prodId'   : productId,
+                            'url'      : url,
                         };
-
-                        let sortable = [];
-                        Object.entries(r.data).forEach(([key, v]) => {
+                        
+                        let res = Object.values(r.data).filter(x => x['self_flag'] === 'f');
+                        res.sort(function (a, b) {
+                            return a['price'] - b['price'];
+                        })
+                        
+                        
+                        for (let i = 0; ; i++) {
+                            if (res[i] === undefined) {
+                                const ii = i === 0 ? 0 : i - 1;
+                                minPrice.quality = parseFloat(res[ii]['quality']).toFixed(2);
+                                minPrice.price = parseInt(res[ii]['price']);
+                                minPrice.id = res[ii]['id'];
+                                break;
+                            }
+                            const v = res[i];
                             const quality = parseFloat(v.quality).toFixed(2);
                             const price = parseInt(v.price);
-                            if (price < 1) {
-                                return;
-                            }
-                            if ((price/ priceTo) > 1000) {
+                            
+                            if ((price / priceTo) > 1000) {
                                 console.log('return > 1000')
-                                return;
+                                continue;
                             }
-                            sortable.push({
-                                'qualityTo': qualityTo,
-                                'quality'  : quality,
-                                'price'    : price,
-                                'q'    : (quality / price).toFixed(2),
-                            })
-                        });
+                            
+                            if (quality >= qualityTo) {
+                                const ii = i === 0 ? 0 : i - 1;
+                                minPrice.quality = parseFloat(res[ii]['quality']).toFixed(2);
+                                minPrice.price = parseInt(res[ii]['price']);
+                                minPrice.id = res[ii]['id'];
+                                break;
+                            }
+                        }
                         
-         
-                        sortable.sort(function(a, b) {
-                            return b['q'] - a['q'];
-                        });
-                        
-
-                        resolve( {...minPrice, ...sortable[0]});
+                        resolve(minPrice);
                     }, 10);
                 },
                 error      : function (jqXHR, textStatus, error) {
@@ -211,7 +221,7 @@ let run = function () {
     function initRun() {
         const $block = $(`<div class="pull-left"></div>`);
         $('#main-tab>.row>div').prepend($block);
-
+        
         
         const $link = $(`<a href="" class="btn-link"><span class="fa fa-circle-o-notch fa-spin" style="display: none"></span> <span class="info">Получить цены</span></a>`);
         $LINK_INFO = $link.find('.info');
@@ -226,12 +236,12 @@ let run = function () {
         });
         
         $block.append($link);
-    
-    
+        
+        
         const $linkStopSaleNull = $(`<a href="" class="btn-link"><span class="info">Снять с продажи пустые слоты</span></a>`);
         $linkStopSaleNull.on('click', function (e) {
             e.preventDefault();
-    
+            
             setStopSaleNull();
         });
         $block.append('<span> · </span>');
