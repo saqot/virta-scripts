@@ -184,10 +184,13 @@ let run = function () {
                         
                         for (let i = 0; ; i++) {
                             if (res[i] === undefined) {
-                                const ii = i === 0 ? 0 : i - 1;
-                                minPrice.quality = parseFloat(res[ii]['quality']).toFixed(2);
-                                minPrice.price = parseInt(res[ii]['price']);
-                                minPrice.id = res[ii]['id'];
+                                if (minPrice.quality === 0) {
+                                    const ii = i === 0 ? 0 : i - 1;
+                                    minPrice.quality = parseFloat(res[ii]['quality']).toFixed(2);
+                                    minPrice.price = parseInt(res[ii]['price']);
+                                    minPrice.id = res[ii]['id'];
+                                }
+                                
                                 break;
                             }
                             const v = res[i];
