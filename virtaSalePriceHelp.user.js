@@ -186,9 +186,11 @@ let run = function () {
                             if (res[i] === undefined) {
                                 if (minPrice.quality === 0) {
                                     const ii = i === 0 ? 0 : i - 1;
-                                    minPrice.quality = parseFloat(res[ii]['quality']).toFixed(2);
-                                    minPrice.price = parseInt(res[ii]['price']);
-                                    minPrice.id = res[ii]['id'];
+                                    if (res[ii] !== undefined) {
+                                        minPrice.quality = parseFloat(res[ii]['quality']).toFixed(2);
+                                        minPrice.price = parseInt(res[ii]['price']);
+                                        minPrice.id = res[ii]['id'];
+                                    }
                                 }
                                 
                                 break;
