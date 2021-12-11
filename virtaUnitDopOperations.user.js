@@ -3,7 +3,7 @@
 // @description Очистка кеша юнита + Удаление юнита + Завоз все ассортимента товара с указанного склада + Вывоз остатков с магазина на склад
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.4
+// @version 2.5
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -15,7 +15,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '2.4';
+    let ver = '2.5';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -355,7 +355,7 @@ let run = async function () {
             });
         }
         
-        function buyProductOffer(token, offerId, qty) {
+        function buyProductOffer(token, offerId, qty, isDuration) {
             return new Promise((resolve) => {
                 $.ajax({
                     async      : true,
@@ -370,6 +370,7 @@ let run = async function () {
                         token   : token,
                         offer_id: offerId,
                         qty     : qty,
+                        duration: isDuration ? 1 : 0,
                     },
                     global     : false,
                     dataType   : "json",
@@ -468,6 +469,7 @@ let run = async function () {
         }
         
         let isBuyReplaceItem = false;
+        let isBuyDurationItem = false;
         let isBuyOneItem = true;
         let buyProcItem = 100;
         
@@ -545,7 +547,7 @@ let run = async function () {
                     marketSize = marketSize < 1 ? 1 : marketSize;
                 }
                 
-                await buyProductOffer(token, offer.id, marketSize)
+                await buyProductOffer(token, offer.id, marketSize, isBuyDurationItem)
                 
                 if (cntCur >= cntAll) {
                     await buyTovarsEnd();
@@ -646,7 +648,7 @@ let run = async function () {
                 '           <label class="mt-checkbox mt-checkbox-outline">Зказаз по одной единице товара' +
                 '               <input value="1" class="chall one-item" name="one-item" type="checkbox"><span></span>' +
                 '           </label>' +
-                '           <label class="mt-checkbox mt-checkbox-outline">Перезаписать количество при совпадении заказов' +
+                '           <label class="mt-checkbox mt-checkbox-outline">Обновить заказы при совпадении' +
                 '               <input value="2" class="chall replace-item" name="replace-item" type="checkbox"><span></span>' +
                 '           </label>' +
                 '       </div>' +
@@ -654,6 +656,11 @@ let run = async function () {
                 '           <div class="edit_field edit_field_compact margin-5-top">' +
                 `               <input type="text" name="proc-item" value="${buyProcItem}" class="form-control text-right virQuantMask proc-item" inputmode="numeric" style="text-align: right;">` +
                 '           </div>' +
+                '       </div>' +
+                '       <div class="col-sm-3 ">' +
+                '           <label class="mt-checkbox mt-checkbox-outline">Разовая закупка' +
+                '               <input value="1" class="chall duration-item" name="duration-item" type="checkbox"><span></span>' +
+                '           </label>' +
                 '       </div>' +
                 '   </div>' +
                 '   <div class="table-body"></div>' +
@@ -677,10 +684,12 @@ let run = async function () {
             const $checkboxOneItem = $modal.find('.one-item');
             const $inputProcItem = $modal.find('.proc-item');
             const $checkboxReplaceItem = $modal.find('.replace-item');
+            const $checkboxDurationItem = $modal.find('.duration-item');
             
             $checkboxOneItem.attr('checked', isBuyOneItem);
             $inputProcItem.attr('disabled', isBuyOneItem);
             $checkboxReplaceItem.attr('checked', isBuyReplaceItem);
+            $checkboxDurationItem.attr('checked', isBuyDurationItem);
             
             const $btnSelectStoreImport = $div.find("button.btn-select-store-import");
             const $btnSelectStoreExport = $div.find("button.btn-selectt-store-export");
@@ -711,6 +720,11 @@ let run = async function () {
                 isBuyReplaceItem = this.checked;
             });
             
+            $checkboxDurationItem.on('change', function (e) {
+                e.preventDefault();
+                isBuyDurationItem = this.checked;
+            });
+            
             $inputProcItem.on('change paste keyup', function () {
                 let v = parseInt(this.value, 10);
                 v = v < v * -1 ? 0 : v;
@@ -733,16 +747,19 @@ let run = async function () {
             width: 50% !important;
             max-width: 50% !important;
         }
-       .vista-ico-brand {
+        .vista-ico-brand {
             border: 1px solid #eee;
             margin: 1px;
             width: 20px !important;
             height: 20px !important;
         }
-       .process-block {
+        .process-block {
             float: right;
         }
-
+        .process-block > .alert {
+            margin: 0 !important;
+            padding: 0px 5px !important;
+        }
         .process-block > .alert {
             margin: 0 !important;
             padding: 0px 5px !important;
