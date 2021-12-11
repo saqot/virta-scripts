@@ -5,7 +5,7 @@
 // @description - Завоз все ассортимента товара с указанного склада
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.2
+// @version 2.3
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -17,7 +17,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '2.2';
+    let ver = '2.3';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -56,6 +56,7 @@ let run = async function () {
             });
         });
     }
+    
     const userInfo = await getUserInfo();
     
     let cityId = null;
@@ -162,12 +163,10 @@ let run = async function () {
     if ($blockNew.length) {
         $iconClearCache = $(`<li><a href="">Очистить кеш</a></li>`);
         $blockNew.append($iconClearCache);
-
+        
         if (userInfo['company_id'] === '10090070') {
             $iconDelete = $(`<li><a href="" >Удалить юнит</a></li>`);
             $blockNew.append($iconDelete);
-        } else {
-            $blockNew.append($(`<li><a href="" >Удалить нехрен все :)</a></li>`));
         }
         
     } else {
@@ -209,10 +208,9 @@ let run = async function () {
         });
     }
     
-    
     // проверка на точность соответсвия страницы
-    const t = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)\/supply/);
-    if (t) {
+    const t2 = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)\/supply/);
+    if (t2) {
         function waitBlock(callback) {
             let time = 0;
             let timer = setInterval(function () {
@@ -311,7 +309,7 @@ let run = async function () {
                         if (res.info.count) {
                             // фильтруем по ID выбранного склада
                             const r = Object.values(res.data).find(function (el) {
-                                return el.unit_id === storeId;
+                                return el['unit_id'] === storeId;
                             });
                             if (r === undefined) {
                                 resolve(null);
@@ -378,7 +376,7 @@ let run = async function () {
             
             const token = await getToken();
             const tovars = await getTovarsUnit(storeId);
-            const res = tovars.filter(x => tovarIds.includes(x.product_id) && x.qty > 0);
+            const res = tovars.filter(x => tovarIds.includes(x['product_id']) && x.qty > 0);
             
             
             let cntAll = res.length;
@@ -400,8 +398,8 @@ let run = async function () {
             for (const r of res) {
                 cntCur++;
                 $prInfo.html(`Закупаем ${cntCur} из ${cntAll}`);
-                const offer = await getOffer(storeId, r.product_id);
-    
+                const offer = await getOffer(storeId, r['product_id']);
+                
                 if (!offer) {
                     if (cntCur >= cntAll) {
                         await buyTovarsEnd();
@@ -410,7 +408,7 @@ let run = async function () {
                 }
                 
                 if (!isBuyReplaceItem) {
-                    if (offer.contract !== undefined) {
+                    if (offer['contract'] !== undefined) {
                         if (cntCur >= cntAll) {
                             await buyTovarsEnd();
                         }
@@ -420,12 +418,12 @@ let run = async function () {
                 
                 let marketSize = 1;
                 if (buyProc) {
-                    marketSize = await getMarketSize(r.product_id);
+                    marketSize = await getMarketSize(r['product_id']);
                     marketSize = ((marketSize * 1) * (buyProc / 100)).toFixed();
                     marketSize = marketSize < 1 ? 1 : marketSize;
                 }
                 
-                const b = await buyProductOffer(token, offer.id, marketSize)
+                await buyProductOffer(token, offer.id, marketSize)
                 
                 if (cntCur >= cntAll) {
                     await buyTovarsEnd();
@@ -434,7 +432,7 @@ let run = async function () {
             }
         }
         
-        async function showTable($div, $modal, $modalBody) {
+        async function showTable($div, $modal, $modalBody, type) {
             const tovarIds = [];
             const $iconsListing = $div.find(".icons_listing:visible input");
             $iconsListing.each(function () {
@@ -455,7 +453,7 @@ let run = async function () {
             
             
             Object.entries(stores).forEach(([k, v]) => {
-                const res = v.products
+                const res = v['products']
                     .filter(x => tovarIds.includes(x.id))
                     .map(x => x.id);
                 if (!res.length) {
@@ -464,27 +462,41 @@ let run = async function () {
                 
                 
                 const $tdIco = $(`<td class="products text-middle vista-products"></td>`);
-                Object.entries(v.products).forEach(([kk, vv]) => {
-                    const ico = `/pub/app/virtonomica/product/${vv.symbol}.gif`;
+                Object.entries(v['products']).forEach(([kk, vv]) => {
+                    const ico = `/pub/app/virtonomica/product/${vv['symbol']}.gif`;
                     $tdIco.append(`<i class="ico brand vista-ico-brand" style="background-image:url(${ico})" title="${vv.name}"></i>`);
                 });
                 
-                const $btnBuy = $(`<button class="btn btn-xs btn-success btn-store-buy" data-storeId="${v.id}" ><i class="fa fa-truck"></i></button>`);
+                let $btnExport = null;
+                let $btnImport = null;
+                
+                switch (type) {
+                    case "import":
+                        $btnImport = $(`<button class="btn btn-xs btn-success btn-store-buy" data-storeId="${v.id}" ><i class="fa fa-truck fa-flip-horizontal"></i></button>`);
+                        break;
+                    case "export":
+                        $btnExport = $(`<button class="btn btn-xs btn-warning btn-store-buy" data-storeId="${v.id}" ><i class="fa fa-truck"></i></button>`);
+                        break;
+                }
                 
                 $tbody.append($(`<tr data-id="${v.id}">`)
-                    .append($(`<td class="text-middle geo_info" style="color: gray;"><i class="ico pull-left flag-${v.country_symbol}-small" title="${v.country_name}"></i><div class="cityPlusID">${v.country_name} / ${v.city_name}<br><span>${v.id}</span></div></td>`))
-                    .append($(`<td class="unit_info"><a href="//virtonomica.ru/vera/main/unit/view/${v.id}">${v.name}</a><br/><span class="font-blue-oleo">${v.size} / ${v.square / 1000000} млн кв. м</span></td>`))
+                    .append($(`<td class="text-middle geo_info" style="color: gray;"><i class="ico pull-left flag-${v['country_symbol']}-small" title="${v['country_name']}"></i><div class="cityPlusID">${v['country_name']} / ${v['city_name']}<br><span>${v.id}</span></div></td>`))
+                    .append($(`<td class="unit_info"><a href="//virtonomica.ru/vera/main/unit/view/${v.id}">${v.name}</a><br/><span class="font-blue-oleo">${v.size} / ${v['square'] / 1000000} млн кв. м</span></td>`))
                     .append($tdIco)
                     .append($(`<td class="text-right text-middle trans-buttons"></td>`)
-                        .append($btnBuy)
+                        .append($btnExport)
+                        .append($btnImport)
                     )
                 );
                 
-                $btnBuy.on('click', function (e) {
-                    e.preventDefault();
-                    
-                    buyTovars($modal, $(this).attr('data-storeId'), tovarIds)
-                });
+                if ($btnExport) {
+                    $btnExport.on('click', function (e) {
+                        e.preventDefault();
+                        
+                        buyTovars($modal, $(this).attr('data-storeId'), tovarIds)
+                    });
+                }
+                
             });
             $modal.modal("show");
         }
@@ -493,7 +505,7 @@ let run = async function () {
             const $modal = $('' +
                 '<div class="modal fade bs-modal-lg in" id="store-modal" role="dialog"><div class="modal-dialog modal-lg">' +
                 '<div class="modal-content">' +
-                '   <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button><h2>Выбор склада для заполнения товаром в текущий магазин</h2></div>' +
+                '   <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button><h2>--</h2></div>' +
                 '   <div class="modal-body">' +
                 '   <div class="row buy-param">' +
                 '       <div class="col-sm-5 ">' +
@@ -521,9 +533,17 @@ let run = async function () {
                 '</div></div>')
             $('#materials-modal').after($modal);
             
+            const $modalTitle = $modal.find('h2');
+            const $modalBuyParam = $modal.find('.buy-param');
             const $modalBody = $modal.find('.table-body')
             const $select = $div.find("select[name=select_category]");
-            $select.after($(`<div class="col-sm-12" style="padding-left: 0 !important;"><fieldset class=\"margin-5-top\"><legend>Дополнительно:</legend><button type="button"  class="btn-link btn-select-store" style="text-align: left;" data-bind="yes"><i class="fa fa-truck fa-flip-horizontal margin-5-right"></i>Заказ всей группы товаров со своего склада</button></fieldset></div>`));
+            $select.after($(`<div class="col-sm-12" style="padding-left: 0 !important;">
+<fieldset class=\"margin-5-top\">
+<legend>Дополнительно:</legend>
+<button type="button"  class="btn-link btn-select-store-import" style="text-align: left;" data-bind="yes"><i class="fa fa-truck fa-flip-horizontal margin-5-right"></i>Заказ группы товаров со своего склада</button>
+<button type="button"  class="btn-link btn-selectt-store-export" style="text-align: left;" data-bind="yes"><i class="fa fa-truck margin-5-right"></i>Вывоз всех товаров на склад</button>
+</fieldset>
+</div>`));
             
             const $checkboxOneItem = $modal.find('.one-item');
             const $inputProcItem = $modal.find('.proc-item');
@@ -533,12 +553,23 @@ let run = async function () {
             $inputProcItem.attr('disabled', isBuyOneItem);
             $checkboxReplaceItem.attr('checked', isBuyReplaceItem);
             
-            const $btn = $div.find("button.btn-select-store");
+            const $btnSelectStoreImport = $div.find("button.btn-select-store-import");
+            const $btnSelectStoreExport = $div.find("button.btn-selectt-store-export");
             
-            $btn.on('click', function (e) {
+            $btnSelectStoreImport.on('click', function (e) {
                 e.preventDefault();
-                showTable($div, $modal, $modalBody);
+                $modalTitle.html('Выбор склада для заполнения товаром в текущий магазин');
+                $modalBuyParam.show();
+                showTable($div, $modal, $modalBody, 'import');
             });
+            
+            $btnSelectStoreExport.on('click', function (e) {
+                e.preventDefault();
+                $modalBuyParam.hide();
+                $modalTitle.html('Вывоз ВСЕЙ продукции на склад');
+                showTable($div, $modal, $modalBody, 'export');
+            });
+            
             
             $checkboxOneItem.on('change', function (e) {
                 e.preventDefault();
@@ -551,7 +582,7 @@ let run = async function () {
                 isBuyReplaceItem = this.checked;
             });
             
-            $inputProcItem.on('change paste keyup', function (e) {
+            $inputProcItem.on('change paste keyup', function () {
                 let v = parseInt(this.value, 10);
                 v = v < v * -1 ? 0 : v;
                 v = v > 100 ? 100 : v;
@@ -582,6 +613,7 @@ let run = async function () {
 
         `;
     document.body.appendChild(sheet);
+    
 }
 
 if (window.top === window) {
