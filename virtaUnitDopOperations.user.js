@@ -3,7 +3,7 @@
 // @description Очистка кеша юнита + Удаление юнита + Завоз все ассортимента товара с указанного склада + Вывоз остатков с магазина на склад
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.5
+// @version 2.6
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -15,7 +15,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '2.5';
+    let ver = '2.6';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -325,7 +325,7 @@ let run = async function () {
             });
         }
         
-        function exportProductToStore(token, storeId, productId, qty) {
+        function exportProductToStore(token, storeId, productId, brandnameID, qty) {
             return new Promise((resolve) => {
                 $.ajax({
                     async      : true,
@@ -336,12 +336,13 @@ let run = async function () {
                         withCredentials: true,
                     },
                     data       : {
-                        id        : unitID,
-                        token     : token,
-                        unit_id   : storeId,
-                        product_id: productId,
-                        qty       : qty,
-                        base_url  : '/api/',
+                        id          : unitID,
+                        token       : token,
+                        unit_id     : storeId,
+                        product_id  : productId,
+                        brandname_id: brandnameID,
+                        qty         : qty,
+                        base_url    : '/api/',
                     },
                     global     : false,
                     dataType   : "json",
@@ -424,6 +425,15 @@ let run = async function () {
             const prods = [];
             $items.each(function () {
                 const $row = $(this);
+                const button = $row.find('button[data-target="to-warehouse-modal"]');
+                const dataLink = button.attr('data-link');
+                const mb = dataLink.match(/brandname_id=(\d+)/);
+                if (!mb) {
+                    consoleEcho('brandnameID не определен', true);
+                }
+                const brandnameID = mb[1];
+                
+
                 const prodId = $row.attr('data-material');
                 let cnt = ($row.find('td:contains("Количество")').next().text());
                 cnt = cnt.replace(/\s+/gi, '');
@@ -432,9 +442,9 @@ let run = async function () {
                 if (cnt > 0) {
                     const res = tovars.filter(x => x['product_id'] === prodId).length;
                     if (res) {
-                        prods.push({prodId: prodId, cnt: cnt});
+                        prods.push({prodId: prodId, brandnameID: brandnameID, cnt: cnt});
                     }
-                    prodsAll.push({prodId: prodId, cnt: cnt});
+                    prodsAll.push({prodId: prodId, brandnameID: brandnameID, cnt: cnt});
                 }
             });
             
@@ -455,7 +465,7 @@ let run = async function () {
                 cntCur++;
                 $prInfo.html(`Вывозим ${cntCur} из ${cntExprtAll}`);
                 
-                await exportProductToStore(token, storeId, r.prodId, r.cnt)
+                await exportProductToStore(token, storeId, r.prodId, r.brandnameID, r.cnt)
                 
                 if (cntCur >= cntExprtAll) {
                     let msg = `Вывезли ${cntCur} из ${cntExprtAll} .`;
