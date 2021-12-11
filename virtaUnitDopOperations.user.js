@@ -1,11 +1,9 @@
 // ==UserScript==
 // @name VIRTA::Unit Dop Operations
-// @description - Очистка кеша юнита
-// @description - Удаление юнита
-// @description - Завоз все ассортимента товара с указанного склада
+// @description Очистка кеша юнита + Удаление юнита + Завоз все ассортимента товара с указанного склада + Вывоз остатков с магазина на склад
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.3
+// @version 2.4
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -17,7 +15,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '2.3';
+    let ver = '2.4';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -327,6 +325,36 @@ let run = async function () {
             });
         }
         
+        function exportProductToStore(token, storeId, productId, qty) {
+            return new Promise((resolve) => {
+                $.ajax({
+                    async      : true,
+                    type       : 'POST',
+                    url        : `https://virtonomica.ru/api/?action=unit/storage/delivery/set&app=virtonomica`,
+                    crossDomain: true,
+                    xhrFields  : {
+                        withCredentials: true,
+                    },
+                    data       : {
+                        id        : unitID,
+                        token     : token,
+                        unit_id   : storeId,
+                        product_id: productId,
+                        qty       : qty,
+                        base_url  : '/api/',
+                    },
+                    global     : false,
+                    dataType   : "json",
+                    success    : function (res) {
+                        resolve(res)
+                    },
+                    error      : function (jqXHR, textStatus, error) {
+                        consoleEcho(`FAIL (ajax) {textStatus=${textStatus} , error=${error}}`, true);
+                    },
+                });
+            });
+        }
+        
         function buyProductOffer(token, offerId, qty) {
             return new Promise((resolve) => {
                 $.ajax({
@@ -355,9 +383,93 @@ let run = async function () {
             });
         }
         
+        async function exportTovars($modal, storeId, $divBlock) {
+            
+            const $prBlock = $modal.find('.process-block');
+            const $prSpin = $prBlock.find('.fa-spin');
+            const $prInfo = $prBlock.find('.info');
+            
+            const $items = $divBlock.find(".tab-content div.active div.item");
+            await $prBlock.show();
+            await $prSpin.show();
+            $prInfo.html('. . .');
+            
+            const token = await getToken();
+            
+            async function exportTovarsEnd(isClose, isModifed, msg) {
+                await $prBlock.hide();
+                await $prSpin.hide();
+                $modal.find("button.btn-store-tablerow").attr('disabled', false);
+                confirm(msg);
+                if (isClose) {
+                    $modal.modal("hide");
+                }
+                if (isModifed) {
+                    await clearCache(unitID, token);
+                    setTimeout(function () {
+                        ajaxTools.reload('materials-main');
+                    }, 100);
+                    
+                    setTimeout(function () {
+                        waitBlock(initBuyTovars);
+                    }, 200);
+                    
+                }
+            }
+            
+            const tovars = await getTovarsUnit(storeId);
+            
+            const prodsAll = [];
+            const prods = [];
+            $items.each(function () {
+                const $row = $(this);
+                const prodId = $row.attr('data-material');
+                let cnt = ($row.find('td:contains("Количество")').next().text());
+                cnt = cnt.replace(/\s+/gi, '');
+                cnt = parseInt(cnt, 10);
+                
+                if (cnt > 0) {
+                    const res = tovars.filter(x => x['product_id'] === prodId).length;
+                    if (res) {
+                        prods.push({prodId: prodId, cnt: cnt});
+                    }
+                    prodsAll.push({prodId: prodId, cnt: cnt});
+                }
+            });
+            
+            if (!prods.length) {
+                if (prodsAll.length) {
+                    await exportTovarsEnd(false, false, 'Вывозить на этот склад нечего, стоит выбрать другой склад.');
+                } else {
+                    await exportTovarsEnd(false, false, 'Нет товаров, которые нужно вывезти.');
+                }
+                return;
+            }
+            
+            
+            let cntExprtAll = prods.length;
+            let cntCur = 0;
+            
+            for (const r of prods) {
+                cntCur++;
+                $prInfo.html(`Вывозим ${cntCur} из ${cntExprtAll}`);
+                
+                await exportProductToStore(token, storeId, r.prodId, r.cnt)
+                
+                if (cntCur >= cntExprtAll) {
+                    let msg = `Вывезли ${cntCur} из ${cntExprtAll} .`;
+                    if (cntExprtAll < prodsAll.length) {
+                        msg = `${msg} Но это не все, остались еще товары`;
+                    }
+                    await exportTovarsEnd(true, true, msg);
+                }
+            }
+            
+        }
+        
         let isBuyReplaceItem = false;
         let isBuyOneItem = true;
-        let buyProcItem = 80;
+        let buyProcItem = 100;
         
         async function buyTovars($modal, storeId, tovarIds) {
             let buyProc = 0
@@ -369,7 +481,11 @@ let run = async function () {
             const $prSpin = $prBlock.find('.fa-spin');
             const $prInfo = $prBlock.find('.info');
             
-            $modal.find("button.btn-store-buy").attr('disabled', true);
+            $([document.documentElement, document.body]).animate({
+                scrollTop: $prBlock.offset().top
+            }, 1000);
+            
+            $modal.find("button.btn-store-tablerow").attr('disabled', true);
             await $prBlock.show();
             await $prSpin.show();
             $prInfo.html('. . .');
@@ -386,13 +502,19 @@ let run = async function () {
             async function buyTovarsEnd() {
                 await $prBlock.hide();
                 await $prSpin.hide();
-                $modal.find("button.btn-store-buy").attr('disabled', false);
+                $modal.find("button.btn-store-tablerow").attr('disabled', false);
                 
-                confirm(`Закупка товаров (${cntCur}) закончена, сейчас будет обновлена страница`);
+                confirm(`Закупка товаров (${cntCur}) закончена`);
+                $modal.modal("hide");
+                
                 await clearCache(unitID, token);
                 setTimeout(function () {
-                    window.location.reload();
+                    ajaxTools.reload('materials-main');
                 }, 100);
+                
+                setTimeout(function () {
+                    waitBlock(initBuyTovars);
+                }, 200);
             }
             
             for (const r of res) {
@@ -472,10 +594,10 @@ let run = async function () {
                 
                 switch (type) {
                     case "import":
-                        $btnImport = $(`<button class="btn btn-xs btn-success btn-store-buy" data-storeId="${v.id}" ><i class="fa fa-truck fa-flip-horizontal"></i></button>`);
+                        $btnImport = $(`<button class="btn btn-xs btn-success btn-store-tablerow" data-storeId="${v.id}" ><i class="fa fa-truck fa-flip-horizontal"></i></button>`);
                         break;
                     case "export":
-                        $btnExport = $(`<button class="btn btn-xs btn-warning btn-store-buy" data-storeId="${v.id}" ><i class="fa fa-truck"></i></button>`);
+                        $btnExport = $(`<button class="btn btn-xs btn-warning btn-store-tablerow" data-storeId="${v.id}" ><i class="fa fa-truck"></i></button>`);
                         break;
                 }
                 
@@ -489,11 +611,17 @@ let run = async function () {
                     )
                 );
                 
+                if ($btnImport) {
+                    $btnImport.on('click', function (e) {
+                        e.preventDefault();
+                        buyTovars($modal, $(this).attr('data-storeId'), tovarIds)
+                    });
+                }
+                
                 if ($btnExport) {
                     $btnExport.on('click', function (e) {
                         e.preventDefault();
-                        
-                        buyTovars($modal, $(this).attr('data-storeId'), tovarIds)
+                        exportTovars($modal, $(this).attr('data-storeId'), $div)
                     });
                 }
                 
@@ -505,7 +633,13 @@ let run = async function () {
             const $modal = $('' +
                 '<div class="modal fade bs-modal-lg in" id="store-modal" role="dialog"><div class="modal-dialog modal-lg">' +
                 '<div class="modal-content">' +
-                '   <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button><h2>--</h2></div>' +
+                '   <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button><h2 style="display: inline;">--</h2>' +
+                '       <div class="col-sm-3 process-block" style="display: none">' +
+                '           <div class="alert alert-info">' +
+                '               <span class="fa fa-circle-o-notch fa-spin" style="display: none"></span> <span class="info">. . .</span>' +
+                '           </div>' +
+                '       </div>' +
+                '    </div>' +
                 '   <div class="modal-body">' +
                 '   <div class="row buy-param">' +
                 '       <div class="col-sm-5 ">' +
@@ -519,11 +653,6 @@ let run = async function () {
                 '       <div class="col-sm-4 "> Количество товара в % от объема рынка:' +
                 '           <div class="edit_field edit_field_compact margin-5-top">' +
                 `               <input type="text" name="proc-item" value="${buyProcItem}" class="form-control text-right virQuantMask proc-item" inputmode="numeric" style="text-align: right;">` +
-                '           </div>' +
-                '       </div>' +
-                '       <div class="col-sm-3 process-block" style="display: none">' +
-                '           <div class="alert alert-info">' +
-                '               <span class="fa fa-circle-o-notch fa-spin" style="display: none"></span> <span class="info">. . .</span>' +
                 '           </div>' +
                 '       </div>' +
                 '   </div>' +
@@ -610,7 +739,14 @@ let run = async function () {
             width: 20px !important;
             height: 20px !important;
         }
+       .process-block {
+            float: right;
+        }
 
+        .process-block > .alert {
+            margin: 0 !important;
+            padding: 0px 5px !important;
+        }
         `;
     document.body.appendChild(sheet);
     
