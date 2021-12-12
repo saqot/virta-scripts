@@ -3,7 +3,7 @@
 // @description Дополнительные данные в список юнитов
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.3
+// @version 1.4
 // @include https://virtonomica.ru/vera/main/company/view/*/unit_list
 // @run-at document-idle
 // ==/UserScript==
@@ -16,7 +16,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '1.3';
+    let ver = '1.4';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -33,6 +33,19 @@ let run = async function () {
         consoleEcho('userID не определен', true);
         return;
     }
+    
+    
+    let sheet = document.createElement('style')
+    sheet.innerHTML = `
+        .products>.ico {
+            border: 1px solid #eee;
+            margin: 1px 0px;
+            width: 22px !important;
+            height: 22px !important;
+        }
+        `;
+    document.body.appendChild(sheet);
+    
     
     function getUserInfo() {
         return new Promise((resolve) => {
@@ -54,6 +67,13 @@ let run = async function () {
                 },
             });
         });
+    }
+    
+    const userInfo = await getUserInfo();
+    
+    if (userInfo['company_id'] !== userID) {
+        consoleEcho('Прерываем работу, страница чужой компании');
+        return;
     }
     
     let dataUnits = {};
@@ -101,8 +121,8 @@ let run = async function () {
         return number;
     }
     
-    function runSetupProfit(data) {
-        let $TRs = $("table tbody tr[data-id]");
+    function runSetupProfit($el, data) {
+        let $TRs = $el.find("table tbody tr[data-id]");
         
         $('table thead tr').append(`<th class="many text-right" style="">Прибыль</th>`);
         
@@ -136,18 +156,22 @@ let run = async function () {
     function waitForTable(callback) {
         let time = 0;
         let poops = setInterval(function () {
-            let el = document.getElementById('unit-list');
+            
+            let el = document.getElementById('units-w-filter');
             if (el) {
+                if ($(el).hasClass('updating')) {
+                    return;
+                }
                 clearInterval(poops);
-                callback(el);
+                callback($(el));
+                
             }
             time += 100;
         }, 100);
     }
     
-    
-    async function initRun(el) {
-        let $btnSorts = $(el).find('thead button');
+    async function initRun($el) {
+        let $btnSorts = $el.find('thead button');
         
         $btnSorts.on('click', function () {
             setTimeout(function () {
@@ -156,7 +180,7 @@ let run = async function () {
         });
         
         const dataUnits = await getDataUnits();
-        runSetupProfit(dataUnits);
+        runSetupProfit($el, dataUnits);
     }
     
     
@@ -166,14 +190,6 @@ let run = async function () {
             waitForTable(initRun);
         }, 1000);
     });
-    
-    
-    const userInfo = await getUserInfo();
-    
-    if (userInfo['company_id'] !== userID) {
-        consoleEcho('Прерываем работу, страница чужой компании');
-        return;
-    }
     
     
     waitForTable(initRun);
