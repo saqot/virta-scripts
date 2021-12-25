@@ -3,7 +3,7 @@
 // @description Очистка кеша юнита + Удаление юнита + Завоз все ассортимента товара с указанного склада + Вывоз остатков с магазина на склад
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.6
+// @version 2.7
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -15,7 +15,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '2.6';
+    let ver = '2.7';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -208,19 +208,20 @@ let run = async function () {
     
     // проверка на точность соответсвия страницы
     const t2 = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)\/supply/);
+    
     if (t2) {
-        function waitBlock(callback) {
+        function waitBlockMarket(callback, tabId = null) {
             let time = 0;
             let timer = setInterval(function () {
                 let el = document.getElementById('materials-main');
                 if (el) {
                     if (el.hasAttribute("data-loaded")) {
                         clearInterval(timer);
-                        callback($(el));
+                        callback($(el), tabId);
                     }
                 }
-                time += 100;
-            }, 100);
+                time += 200;
+            }, 200);
         }
         
         // получить в запросе local_market_size (объем рынка)
@@ -252,7 +253,7 @@ let run = async function () {
                 $.ajax({
                     async      : true,
                     type       : 'GET',
-                    url        : `https://virtonomica.ru/api/vera/main/company/units?id=${userInfo['company_id']}&unit_type_id=2011&format=json&wrap=0`,
+                    url        : `https://virtonomica.ru/api/vera/main/company/units?id=${userInfo['company_id']}&unit_type_id=2011&format=json&wrap=0&pagesize=1000`,
                     crossDomain: true,
                     xhrFields  : {
                         withCredentials: true,
@@ -317,6 +318,35 @@ let run = async function () {
                         } else {
                             resolve(null);
                         }
+                    },
+                    error      : function (jqXHR, textStatus, error) {
+                        consoleEcho(`FAIL (ajax) {textStatus=${textStatus} , error=${error}}`, true);
+                    },
+                });
+            });
+        }
+    
+        function productStoreClear(token, productId, brandnameID) {
+            return new Promise((resolve) => {
+                $.ajax({
+                    async      : true,
+                    type       : 'POST',
+                    url        : `https://virtonomica.ru/api/?action=unit/storage/clear&app=virtonomica`,
+                    crossDomain: true,
+                    xhrFields  : {
+                        withCredentials: true,
+                    },
+                    data       : {
+                        id          : unitID,
+                        token       : token,
+                        product_id  : productId,
+                        brandname_id: brandnameID,
+                        base_url    : '/api/',
+                    },
+                    global     : false,
+                    dataType   : "json",
+                    success    : function (res) {
+                        resolve(res)
                     },
                     error      : function (jqXHR, textStatus, error) {
                         consoleEcho(`FAIL (ajax) {textStatus=${textStatus} , error=${error}}`, true);
@@ -391,6 +421,8 @@ let run = async function () {
             const $prSpin = $prBlock.find('.fa-spin');
             const $prInfo = $prBlock.find('.info');
             
+            const activeCategoryId = $divBlock.find(".nav-tabs li.active a").attr('data-category_id');
+
             const $items = $divBlock.find(".tab-content div.active div.item");
             await $prBlock.show();
             await $prSpin.show();
@@ -413,7 +445,7 @@ let run = async function () {
                     }, 100);
                     
                     setTimeout(function () {
-                        waitBlock(initBuyTovars);
+                        waitBlockMarket(initBuyTovars, activeCategoryId);
                     }, 200);
                     
                 }
@@ -464,8 +496,15 @@ let run = async function () {
             for (const r of prods) {
                 cntCur++;
                 $prInfo.html(`Вывозим ${cntCur} из ${cntExprtAll}`);
-                
-                await exportProductToStore(token, storeId, r.prodId, r.brandnameID, r.cnt)
+    
+                const rr = await exportProductToStore(token, storeId, r.prodId, r.brandnameID, r.cnt)
+
+                if (rr !== '1') {
+                    cntCur--;
+                    continue;
+                }
+                // const rrr = await productStoreClear(token, r.prodId, r.brandnameID)
+                // console.log ('rrr', rrr);
                 
                 if (cntCur >= cntExprtAll) {
                     let msg = `Вывезли ${cntCur} из ${cntExprtAll} .`;
@@ -525,7 +564,7 @@ let run = async function () {
                 }, 100);
                 
                 setTimeout(function () {
-                    waitBlock(initBuyTovars);
+                    waitBlockMarket(initBuyTovars);
                 }, 200);
             }
             
@@ -640,115 +679,235 @@ let run = async function () {
             });
             $modal.modal("show");
         }
-        
-        function initBuyTovars($div) {
-            const $modal = $('' +
-                '<div class="modal fade bs-modal-lg in" id="store-modal" role="dialog"><div class="modal-dialog modal-lg">' +
-                '<div class="modal-content">' +
-                '   <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button><h2 style="display: inline;">--</h2>' +
-                '       <div class="col-sm-3 process-block" style="display: none">' +
-                '           <div class="alert alert-info">' +
-                '               <span class="fa fa-circle-o-notch fa-spin" style="display: none"></span> <span class="info">. . .</span>' +
-                '           </div>' +
-                '       </div>' +
-                '    </div>' +
-                '   <div class="modal-body">' +
-                '   <div class="row buy-param">' +
-                '       <div class="col-sm-5 ">' +
-                '           <label class="mt-checkbox mt-checkbox-outline">Зказаз по одной единице товара' +
-                '               <input value="1" class="chall one-item" name="one-item" type="checkbox"><span></span>' +
-                '           </label>' +
-                '           <label class="mt-checkbox mt-checkbox-outline">Обновить заказы при совпадении' +
-                '               <input value="2" class="chall replace-item" name="replace-item" type="checkbox"><span></span>' +
-                '           </label>' +
-                '       </div>' +
-                '       <div class="col-sm-4 "> Количество товара в % от объема рынка:' +
-                '           <div class="edit_field edit_field_compact margin-5-top">' +
-                `               <input type="text" name="proc-item" value="${buyProcItem}" class="form-control text-right virQuantMask proc-item" inputmode="numeric" style="text-align: right;">` +
-                '           </div>' +
-                '       </div>' +
-                '       <div class="col-sm-3 ">' +
-                '           <label class="mt-checkbox mt-checkbox-outline">Разовая закупка' +
-                '               <input value="1" class="chall duration-item" name="duration-item" type="checkbox"><span></span>' +
-                '           </label>' +
-                '       </div>' +
-                '   </div>' +
-                '   <div class="table-body"></div>' +
-                '   </div>' +
-                '</div>' +
-                '</div></div>')
-            $('#materials-modal').after($modal);
-            
-            const $modalTitle = $modal.find('h2');
-            const $modalBuyParam = $modal.find('.buy-param');
-            const $modalBody = $modal.find('.table-body')
+    
+        async function initBuyTovars($div, activeCatId) {
             const $select = $div.find("select[name=select_category]");
-            $select.after($(`<div class="col-sm-12" style="padding-left: 0 !important;">
+            if ($select.length) {
+                // выбираем прощлую активную вкладку
+                if (activeCatId) {
+                    $div.find(`a[data-category_id=${activeCatId}]`).trigger("click");
+                }
+                
+                let $modal = $('.tvr-modal')
+                if (!$modal.length) {
+                    $modal = $('' +
+                        '<div class="modal fade bs-modal-lg in tvr-modal" id="store-modal" role="dialog"><div class="modal-dialog modal-lg">' +
+                        '<div class="modal-content">' +
+                        '   <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button><h2 style="display: inline;">--</h2>' +
+                        '       <div class="col-sm-3 process-block" style="display: none">' +
+                        '           <div class="alert alert-info">' +
+                        '               <span class="fa fa-circle-o-notch fa-spin" style="display: none"></span> <span class="info">. . .</span>' +
+                        '           </div>' +
+                        '       </div>' +
+                        '    </div>' +
+                        '   <div class="modal-body">' +
+                        '   <div class="row buy-param">' +
+                        '       <div class="col-sm-5 ">' +
+                        '           <label class="mt-checkbox mt-checkbox-outline">Зказаз по одной единице товара' +
+                        '               <input value="1" class="chall one-item" name="one-item" type="checkbox"><span></span>' +
+                        '           </label>' +
+                        '           <label class="mt-checkbox mt-checkbox-outline">Обновить заказы при совпадении' +
+                        '               <input value="2" class="chall replace-item" name="replace-item" type="checkbox"><span></span>' +
+                        '           </label>' +
+                        '       </div>' +
+                        '       <div class="col-sm-4 "> Количество товара в % от объема рынка:' +
+                        '           <div class="edit_field edit_field_compact margin-5-top">' +
+                        `               <input type="text" name="proc-item" value="${buyProcItem}" class="form-control text-right virQuantMask proc-item" inputmode="numeric" style="text-align: right;">` +
+                        '           </div>' +
+                        '       </div>' +
+                        '       <div class="col-sm-3 ">' +
+                        '           <label class="mt-checkbox mt-checkbox-outline">Разовая закупка' +
+                        '               <input value="1" class="chall duration-item" name="duration-item" type="checkbox"><span></span>' +
+                        '           </label>' +
+                        '       </div>' +
+                        '   </div>' +
+                        '   <div class="table-body"></div>' +
+                        '   </div>' +
+                        '</div>' +
+                        '</div></div>')
+                    $('#materials-modal').after($modal);
+                }
+
+    
+                const $modalTitle = $modal.find('h2');
+                const $modalBuyParam = $modal.find('.buy-param');
+                const $modalBody = $modal.find('.table-body')
+    
+
+                if (!$div.find('.tvr-menu').length) {
+                    $select.after($(`<div class="col-sm-12 tvr-menu" style="padding-left: 0 !important;">
 <fieldset class=\"margin-5-top\">
 <legend>Дополнительно:</legend>
 <button type="button"  class="btn-link btn-select-store-import" style="text-align: left;" data-bind="yes"><i class="fa fa-truck fa-flip-horizontal margin-5-right"></i>Заказ группы товаров со своего склада</button>
 <button type="button"  class="btn-link btn-selectt-store-export" style="text-align: left;" data-bind="yes"><i class="fa fa-truck margin-5-right"></i>Вывоз всех товаров на склад</button>
 </fieldset>
 </div>`));
-            
-            const $checkboxOneItem = $modal.find('.one-item');
-            const $inputProcItem = $modal.find('.proc-item');
-            const $checkboxReplaceItem = $modal.find('.replace-item');
-            const $checkboxDurationItem = $modal.find('.duration-item');
-            
-            $checkboxOneItem.attr('checked', isBuyOneItem);
-            $inputProcItem.attr('disabled', isBuyOneItem);
-            $checkboxReplaceItem.attr('checked', isBuyReplaceItem);
-            $checkboxDurationItem.attr('checked', isBuyDurationItem);
-            
-            const $btnSelectStoreImport = $div.find("button.btn-select-store-import");
-            const $btnSelectStoreExport = $div.find("button.btn-selectt-store-export");
-            
-            $btnSelectStoreImport.on('click', function (e) {
-                e.preventDefault();
-                $modalTitle.html('Выбор склада для заполнения товаром в текущий магазин');
-                $modalBuyParam.show();
-                showTable($div, $modal, $modalBody, 'import');
-            });
-            
-            $btnSelectStoreExport.on('click', function (e) {
-                e.preventDefault();
-                $modalBuyParam.hide();
-                $modalTitle.html('Вывоз ВСЕЙ продукции на склад');
-                showTable($div, $modal, $modalBody, 'export');
-            });
-            
-            
-            $checkboxOneItem.on('change', function (e) {
-                e.preventDefault();
-                $inputProcItem.attr('disabled', this.checked);
-                isBuyOneItem = this.checked;
-            });
-            
-            $checkboxReplaceItem.on('change', function (e) {
-                e.preventDefault();
-                isBuyReplaceItem = this.checked;
-            });
-            
-            $checkboxDurationItem.on('change', function (e) {
-                e.preventDefault();
-                isBuyDurationItem = this.checked;
-            });
-            
-            $inputProcItem.on('change paste keyup', function () {
-                let v = parseInt(this.value, 10);
-                v = v < v * -1 ? 0 : v;
-                v = v > 100 ? 100 : v;
-                v = isNaN(v) ? 0 : v;
-                
-                buyProcItem = v;
-                $(this).val(v);
-            });
-            
+    
+                }
+    
+
+                const $checkboxOneItem = $modal.find('.one-item');
+                const $inputProcItem = $modal.find('.proc-item');
+                const $checkboxReplaceItem = $modal.find('.replace-item');
+                const $checkboxDurationItem = $modal.find('.duration-item');
+    
+                $checkboxOneItem.attr('checked', isBuyOneItem);
+                $inputProcItem.attr('disabled', isBuyOneItem);
+                $checkboxReplaceItem.attr('checked', isBuyReplaceItem);
+                $checkboxDurationItem.attr('checked', isBuyDurationItem);
+    
+                const $btnSelectStoreImport = $div.find("button.btn-select-store-import");
+                const $btnSelectStoreExport = $div.find("button.btn-selectt-store-export");
+    
+                $btnSelectStoreImport.on('click', function (e) {
+                    e.preventDefault();
+                    $modalTitle.html('Выбор склада для заполнения товаром в текущий магазин');
+                    $modalBuyParam.show();
+                    showTable($div, $modal, $modalBody, 'import');
+                });
+    
+                $btnSelectStoreExport.on('click', function (e) {
+                    e.preventDefault();
+                    $modalBuyParam.hide();
+                    $modalTitle.html('Вывоз ВСЕЙ продукции на склад');
+                    showTable($div, $modal, $modalBody, 'export');
+                });
+    
+    
+                $checkboxOneItem.on('change', function (e) {
+                    e.preventDefault();
+                    $inputProcItem.attr('disabled', this.checked);
+                    isBuyOneItem = this.checked;
+                });
+    
+                $checkboxReplaceItem.on('change', function (e) {
+                    e.preventDefault();
+                    isBuyReplaceItem = this.checked;
+                });
+    
+                $checkboxDurationItem.on('change', function (e) {
+                    e.preventDefault();
+                    isBuyDurationItem = this.checked;
+                });
+    
+                $inputProcItem.on('change paste keyup', function () {
+                    let v = parseInt(this.value, 10);
+                    v = v < v * -1 ? 0 : v;
+                    v = v > 100 ? 100 : v;
+                    v = isNaN(v) ? 0 : v;
+        
+                    buyProcItem = v;
+                    $(this).val(v);
+                });
+            }
         }
         
-        waitBlock(initBuyTovars);
+        waitBlockMarket(initBuyTovars);
         
+
+        //-------------------------------------------------------------
+        function waitBlockWarehouse(callback) {
+            let time = 0;
+            let timer = setInterval(function () {
+                let el = document.getElementById('warehouse-select');
+                if (el) {
+                    if (el.hasAttribute("data-loaded")) {
+                        clearInterval(timer);
+                        callback($(el));
+                    }
+                }
+                time += 200;
+            }, 200);
+        }
+        
+        async function initBuyWarehouse($div) {
+            let $elStoreTitle = $('h3:contains("Выбор поставщика")')
+    
+            if ($elStoreTitle.length) {
+        
+                function getOfferId(id, prodid, brandid) {
+                    return new Promise((resolve) => {
+                        $.ajax({
+                            async      : true,
+                            type       : 'GET',
+                            url        : `https://virtonomica.ru/api/vera/main/unit/supply/offers?ajax=1&format=json&id=${id}&type=product&wrap=0&product_id=${prodid}&supplier_type=all&total_price_from=&total_price_to=&quality_from=1&quality_to=&quantity_from=&free_for_buy=1&brandname_id=${brandid},`,
+                            crossDomain: true,
+                            xhrFields  : {
+                                withCredentials: true,
+                            },
+                            global     : false,
+                            dataType   : "json",
+                            success    : function (res) {
+                                // resolve(res.data);
+                                resolve(Object.keys(res.data)[0]);
+                            },
+                            error      : function (jqXHR, textStatus, error) {
+                                consoleEcho(`FAIL (ajax) {textStatus=${textStatus} , error=${error}}`, true);
+                            },
+                        });
+                    });
+                }
+        
+                function buyOneTovar(unitID, token, offerId) {
+                    return new Promise((resolve) => {
+                        $.ajax({
+                            async      : true,
+                            type       : 'POST',
+                            url        : 'https://virtonomica.ru/api/vera/main/unit/supply/set?format=json&app=adapter_vrt',
+                            crossDomain: true,
+                            data       : {
+                                id              : unitID,
+                                token           : token,
+                                offer_id        : offerId,
+                                qty             : '1',
+                                quality_min     : '',
+                                price_constraint: '2',
+                                price_max       : '0',
+                            },
+                            success    : function (res) {
+                                resolve(res);
+                            },
+                            error      : function (jqXHR, textStatus, error) {
+                                consoleEcho(`FAIL (ajax) {textStatus=${textStatus} , error=${error}}`, true);
+                            },
+                        });
+                    });
+                }
+        
+                const linkBuyOneStore = $('<a href="" style="margin-left: 20px;font-size: 14px;">Закупить всех по одному</a>');
+                $elStoreTitle.append(linkBuyOneStore);
+        
+                const token = await getToken();
+                $elStoreTitle.on('click', function (e) {
+                    e.preventDefault();
+            
+                    const $btns = $div.find('button');
+                    let cnt = $btns.length;
+            
+                    $btns.each(async function () {
+                        const did = $(this).attr('data-id');
+                        const prodid = $(this).attr('data-product_id');
+                        const brandid = $(this).attr('data-brandname_id');
+                        const offerId = await getOfferId(did, prodid, brandid);
+                        if (offerId) {
+                            await buyOneTovar(unitID, token, offerId);
+                        }
+                        
+                        cnt--;
+                        if (cnt <= 0) {
+                            setTimeout(function () {
+                                ajaxTools.reload('materials-main');
+                            }, 100);
+                        }
+                    });
+            
+            
+                });
+            }
+        }
+    
+        waitBlockWarehouse(initBuyWarehouse);
+        //-------------------------------------------------------------
     }
     
     let sheet = document.createElement('style')
