@@ -3,7 +3,7 @@
 // @description Скрытие ачивок в спойлер + Вписываение оргомных изображений в размер форума
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.2
+// @version 1.3
 // @include https://virtonomica.ru/*/forum/*/topic/*
 // @run-at document-idle
 // ==/UserScript==
@@ -15,7 +15,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '1.2';
+    let ver = '1.3';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -84,9 +84,10 @@ let run = async function () {
             });
         }
         
-        $imgs.each(function () {
+        $imgs.each(async function () {
             const $el = $(this);
-            const width = getImgWidth($el.attr('src'));
+            const width = await getImgWidth($el.attr('src'));
+
             if (width > '690') {
                 $el.addClass('prew');
             }
