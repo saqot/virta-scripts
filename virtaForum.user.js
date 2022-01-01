@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name VIRTA::Forum
-// @description Скрытие ачивок в спойлер
+// @description Скрытие ачивок в спойлер + Вписываение оргомных изображений в размер форума
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.1
+// @version 1.2
 // @include https://virtonomica.ru/*/forum/*/topic/*
 // @run-at document-idle
 // ==/UserScript==
@@ -15,7 +15,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '1.1';
+    let ver = '1.2';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -69,9 +69,43 @@ let run = async function () {
         });
     
     }
+    
+    let $imgs = $('td.forum_message_content img');
+    
+    if ($imgs.length) {
+        function getImgWidth(imgSrc) {
+            return new Promise((resolve) => {
+                const newImg = new Image();
+                newImg.onload = function() {
+                    const width = newImg.width;
+                    resolve(width);
+                }
+                newImg.src = imgSrc;
+            });
+        }
+        
+        $imgs.each(function () {
+            const $el = $(this);
+            const width = getImgWidth($el.attr('src'));
+            if (width > '690') {
+                $el.addClass('prew');
+            }
+        });
 
+        
+    }
+    
+
+    
     let sheet = document.createElement('style')
     sheet.innerHTML = `
+    img.prew {
+           width: 100%;
+           max-width: 690px;
+           border: 1px solid #d1d8e0 !important;
+           padding: 1px;
+           margin: 10px 0 auto;
+        }
 		.fieldset-awards {
             border: 1px solid #d1d8e0 !important;
             padding: 0 !important;
