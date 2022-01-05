@@ -3,7 +3,7 @@
 // @description Помощь при работе со страницей сбыта у складов
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.6
+// @version 1.7
 // @include https://virtonomica.ru/*/main/unit/view/*/sale
 // @include https://virtonomica.ru/*/main/unit/view/*/sale#*
 // @include https://virtonomica.ru/*/main/unit/view/*/sale?*
@@ -17,7 +17,7 @@ let run = function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '1.6';
+    let ver = '1.7';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -58,15 +58,15 @@ let run = function () {
                 const $worldprice = $row.find(".world-price");
                 const worldprice = $worldprice.length > 0 ? parseInt($worldprice.attr("data-price")) : 0;
 
-                const price = parseInt($row.find("input[name=price]").val());
+                const price = Math.ceil($row.find("input[name=price]").val());
                 const offer = parseInt($row.find("select[name=offer_constraint]").val());
                 let cnt = $row.find('div').eq(1).find('tbody tr').eq(0).find('td').eq(1).html();
                 cnt = parseInt(cnt.replace(/&nbsp;/gi, ''));
-    
+
                 if (cnt > 0 && (price === 0 || offer === 0)) {
                     $row.show();
                 } else {
-                    if (worldprice && (worldprice/price) >= 1.5) {
+                    if (worldprice && (worldprice/price) >= 1.5 && offer !== 3) {
                         $row.show();
                     } else {
                         $row.hide();
@@ -175,25 +175,35 @@ let run = function () {
                         fill_model: d.attr("data-model"),
                     });
                 });
+    
+                const $blockSetPtrice = $form.find('.block_set-price');
+    
+                if ($blockSetPtrice.length) {
+                    $blockSetPtrice.remove();
+                }
+    
+                const $block = $(`<span class="block_set-price"></span>`)
                 
                 const $btnRow = $(`<div class="btn-group btn-group-xs btn-group-solid normal">
-								<a class="btn btn-default btn-xs action_set-ptrice" data-price="${(minPrice.price - (minPrice.price * (10 / 100))).toFixed(0)}">-10%</a>
-								<a class="btn btn-default btn-xs action_set-ptrice" data-price="${minPrice.price}">100%</a>
-								<a class="btn btn-default btn-xs action_set-ptrice" data-price="${(minPrice.price + (minPrice.price * (10 / 100))).toFixed(0)}">+10%</a>
+								<a class="btn btn-default btn-xs action_set-price" data-price="${(minPrice.price - (minPrice.price * (10 / 100))).toFixed(0)}">-10%</a>
+								<a class="btn btn-default btn-xs action_set-price" data-price="${minPrice.price}">100%</a>
+								<a class="btn btn-default btn-xs action_set-price" data-price="${(minPrice.price + (minPrice.price * (10 / 100))).toFixed(0)}">+10%</a>
 							</div>`)
                 
-                const $btnSetPtrice = $btnRow.find('.action_set-ptrice');
+                const $btnSetPtrice = $btnRow.find('.action_set-price');
                 $btnSetPtrice.on('click', function (e) {
                     e.preventDefault();
                     let price_ = $(this).attr("data-price");
                     $inputPrice.val(price_).trigger("change");
                 });
                 
-                const $br = $form.find('br');
-                $br.before($linkShowTable);
-                $br.before(`<span class="text-muted world-price" data-price="${minPrice.price}" style="margin: 0 5px;">${minPrice.price.toLocaleString('ru')}</span><sup class="text-muted">(${minPrice.quality})</sup>`);
-                $br.before($btnRow);
                 
+                $block.append($linkShowTable);
+                $block.append(`<span class="text-muted world-price" data-price="${minPrice.price}" style="margin: 0 5px;">${minPrice.price.toLocaleString('ru')}</span><sup class="text-muted">(${minPrice.quality})</sup>`);
+                $block.append($btnRow);
+                
+                const $br = $form.find('br');
+                $br.before($block);
                 
             } else {
                 $form.find('br').before(`<span class="text-muted world-price" data-price="0" style="margin: 0 5px;">- -</span>`);
@@ -217,7 +227,7 @@ let run = function () {
         return new Promise((resolve) => {
             let qualityFrom = parseInt(qualityTo - (qualityTo * (40 / 100)));
             //let qualityTo_ = parseInt(qualityTo + (qualityTo * (40 / 100)));
-            let url = `https://virtonomica.ru/api/${realm}/main/unit/supply/offers?ajax=1format=json&id=${unitID}&type=product&product_id=${productId}&total_price_from=1&quality_from=${qualityFrom}&free_for_buy=100&pagesize=50&sort=total_cost/asc`;
+            let url = `https://virtonomica.ru/api/${realm}/main/unit/supply/offers?ajax=1format=json&id=${unitID}&type=product&product_id=${productId}&total_price_from=1&quality_from=${qualityFrom}&supplier_type=all&free_for_buy=100&pagesize=50&sort=total_cost/asc`;
             $.ajax({
                 async      : true,
                 type       : 'GET',
