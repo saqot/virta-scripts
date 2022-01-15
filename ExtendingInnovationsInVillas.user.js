@@ -3,7 +3,7 @@
 // @description Продление(пересоздание) инновации на виллах
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.5
+// @version 1.6
 // @include https://virtonomica.ru/vera/main/management_action/*/artefact/list
 // @include https://virtonomica.ru/vera/main/management_action/*/artefact/list#
 // @run-at document-idle
@@ -15,7 +15,7 @@ let run = async function () {
     let win = (typeof (unsafeWindow) != 'undefined' ? unsafeWindow : top.window);
     $ = win.$;
     
-    let ver = '1.5';
+    let ver = '1.6';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -31,29 +31,61 @@ let run = async function () {
         return;
     }
     
-    const $td = $('table.unit-top td').first();
-    if ($td.find('.i-villa').length < 1) {
-        consoleEcho('Вилл нет, останавливаемся');
-        return;
+    let token = null
+    
+    function getToken() {
+        return new Promise((resolve) => {
+            if (token === null) {
+                $.ajax({
+                    async      : true,
+                    type       : 'GET',
+                    url        : `https://virtonomica.ru/api/vera/main/token`,
+                    crossDomain: true,
+                    xhrFields  : {
+                        withCredentials: true,
+                    },
+                    global     : false,
+                    dataType   : "json",
+                    success    : function (res) {
+                        resolve(res);
+                        token = res;
+                    },
+                    error      : function (a, b, c) {
+                        console.error(a, b, c);
+                    },
+                });
+            } else {
+                resolve(token);
+            }
+            
+        });
     }
     
-    $td.append('' +
-        '<a class="upd-vills" href="" style="width: 160px; float: right;padding: 2px 5px; border: 1px solid #0184D0;">Обновить инновации вилл</a>' +
-        '');
-    const $btnUpdate = $td.find('.upd-vills');
-    
-    $btnUpdate.on('click', function (e) {
-        e.preventDefault();
-        if ($btnUpdate.hasClass('disabled')) {
-            return;
-        }
-        
-        runUpdateVillls();
-        
-    });
+    async function clearCache(unitID) {
+        let token_ = await getToken()
+        return new Promise((resolve) => {
+            $.ajax({
+                async      : true,
+                type       : 'POST',
+                url        : 'https://virtonomica.ru/api/vera/main/unit/refresh',
+                crossDomain: true,
+                data       : {
+                    id   : unitID,
+                    token: token_,
+                },
+                success    : function (res) {
+                    resolve(res);
+                },
+                error      : function (jqXHR, textStatus, error) {
+                    consoleEcho(`FAIL (ajax) {textStatus=${textStatus} , error=${error}}`, true);
+                },
+            });
+        });
+    }
     
     
     function deleteArt(unitID, artID) {
+        
         return new Promise((resolve) => {
             $.ajax({
                 async      : true,
@@ -228,34 +260,37 @@ let run = async function () {
         });
     }
     
-    function runUpdateVillls() {
-        $btnUpdate.addClass('disabled');
+    function runUpdateVillls($btn) {
+        $btn.addClass('disabled');
         
         return new Promise(async (resolve) => {
             const vills = await getListVills(userID);
             let all = vills.length;
             
-            $btnUpdate.html(`Обновляем виллы: ${all}`)
+            $btn.html(`Обновляем виллы: ${all}`)
             
-            updateVill(0, all, vills);
+            updateVill($btn, 0, all, vills);
             
             resolve(true);
         });
         
     }
     
-    function updateVill(n, all, vills) {
+    function updateVill($btn, n, all, vills) {
         setTimeout(async () => {
             let vill = vills[n];
             if (vill === undefined) {
                 consoleEcho(`Обновили вилл: ${n}`);
                 
                 setTimeout(function () {
-                    $btnUpdate.html(`Обновили вилл: ${n}`)
+                    $btn.html(`Обновили вилл: ${n}`)
                     
                     setTimeout(function () {
-                        $btnUpdate.html(`Обновили вилл: ${n} </br>Обновить виллы еще разок`)
-                        $btnUpdate.removeClass('disabled');
+                        $btn.html(`Обновили вилл: ${n} </br>Обновить виллы еще раз`)
+                        $btn.removeClass('disabled');
+                        setTimeout(function () {
+                            ajaxTools.reload('unit-list');
+                        }, 100);
                         
                     }, 2000);
                     
@@ -298,15 +333,18 @@ let run = async function () {
                 if (art === undefined) {
                     // назначем для тех, кого уже нет
                     await attachArt(unitID, slot['id'], slot['art']['id'])
+                    await clearCache(unitID)
                 } else {
                     // Политическая агитация - обновляем всегда
                     if (art['ttl'] === '10') {
                         await deleteArt(art['unit_id'], art['id'])
                         await attachArt(unitID, slot['id'], slot['art']['id'])
+                        await clearCache(unitID)
                     } else {
                         if (parseInt(art['expires']) <= 30) {
                             await deleteArt(unitID, art['id'])
                             await attachArt(unitID, slot['id'], slot['art']['id'])
+                            await clearCache(unitID)
                         }
                     }
                 }
@@ -314,11 +352,92 @@ let run = async function () {
             });
             
             
-            $btnUpdate.html(`Обновляем ${n + 1}/${all}`);
-            updateVill(n + 1, all, vills);
+            $btn.html(`Обновляем ${n + 1}/${all}`);
+            updateVill($btn, n + 1, all, vills);
             
-        }, 1000);
+        }, 700);
     }
+    
+    
+    function waitBlockVillls(callback) {
+        let time = 0;
+        let timer = setInterval(function () {
+            let el = document.getElementById('unit-list');
+            if (el) {
+                if (el.hasAttribute("data-loaded")) {
+                    clearInterval(timer);
+                    callback($(el));
+                }
+            }
+            time += 200;
+        }, 200);
+    }
+    
+    const $btnBlock = $('.unit_class_filter');
+    
+    function initVillls() {
+        let $updateBlock = $btnBlock.find('.item.upd-vills');
+        
+        
+        const $spanActive = $btnBlock.find('.item.active');
+        if ($spanActive === undefined) {
+            if ($updateBlock.length) {
+                $updateBlock.hide();
+            }
+            return;
+        }
+        if (!$spanActive.find('span.ico').hasClass('ut-villa')) {
+            if ($updateBlock.length) {
+                $updateBlock.hide();
+            }
+            return;
+        }
+        
+        if (!$updateBlock.length) {
+            $spanActive.after('<span class="item upd-vills"><a class="upd-vills-act" href="" >Обновить инновации вилл</a></span>');
+            $updateBlock = $btnBlock.find('.item.upd-vills');
+        } else {
+            $updateBlock.show();
+        }
+        
+        const $btnUpdate = $updateBlock.find('a');
+        $btnUpdate.on('click', function (e) {
+            e.preventDefault();
+            if ($btnUpdate.hasClass('disabled')) {
+                return;
+            }
+            
+            runUpdateVillls($btnUpdate);
+        });
+    }
+    
+    const $btns = $btnBlock.find('button');
+    $btns.on('click', function () {
+        waitBlockVillls(initVillls);
+    });
+    
+    waitBlockVillls(initVillls);
+    
+    
+    let sheet = document.createElement('style')
+    sheet.innerHTML = `
+        .upd-vills {
+            width: 160px !important;
+            max-width: 160px !important;
+            float: right;
+            padding: 2px 4px;
+            border: 1px solid #5cb85c;
+            margin: 2px 0px 2px -1px;
+        }
+
+        .upd-vills > a {
+            display: block;
+            color: #0f710f;
+        }
+        `;
+    document.body.appendChild(sheet);
+    
+    
 }
 
 if (window.top === window) {
