@@ -3,7 +3,7 @@
 // @description Дополнительные данные на странице юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.1
+// @version 2.2
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -21,7 +21,7 @@ let run = async function () {
     }
     
     // ==================================================
-    let ver = '2.1';
+    let ver = '2.2';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -156,18 +156,18 @@ let run = async function () {
             'shop'         : 5,
             'restaurant'   : 5,
             'lab'          : 5,
-            'workshop'     : 50,
+            'workshop'     : 150,
             'mill'         : 5,
             'sawmill'      : 12.5,
-            'animalfarm'   : 7.5,
+            'animalfarm'   : 11,
             'medicine'     : 12.5,
-            'fishingbase'  : 12.5,
+            'fishingbase'  : 75,
             'farm'         : 20,
-            'orchard'      : 15,
-            'mine'         : 100,
+            'orchard'      : 150,
+            'mine'         : 170,
             'office'       : 1,
             'service_light': 1.5,
-            'power'        : 75.0,
+            'power'        : 85,
             'repair'       : 2.5,
             'fuel'         : 2.5,
             'educational'  : 1.5,
@@ -189,7 +189,12 @@ let run = async function () {
         const forecast = await getUnitForecast(unitID); // данные с прогноза
         //console.log('unit', unit);
         //console.log('forecast', forecast);
+        //console.log('unitType', unitType);
         
+        // исключаем заведомо не нужные
+        if (['villa', 'network', 'warehouse'].includes(unitType)) {
+            return;
+        }
         
         //---------------------------------------------------------
         // проставляем признак изменения квалы в блоке ТОП МЕНЕДЖЕР
@@ -242,7 +247,7 @@ let run = async function () {
         let $elEmployee = $div.find('li:contains("Квалификация сотр")');
         if ($elEmployee.length) {
             const kv = unit['competence_value'] * 1;    // квалификация игрока
-            const kvp = floor2(unit['employee_level']);    // квалификация персонала
+            const kvp = unit['employee_level'] * 1;    // квалификация персонала
             const kvpMax = calcMaxKvalaUser(unit);
             
             const empCntMax = calcPersonalTop1(kv, kvp, unitType);
@@ -285,8 +290,7 @@ let run = async function () {
                     <div class="pull-right ${textColorKvp}">${kvp}</div>
                 </div>
                 <div class="text-muted small clearfix">
-                    <span >Максимальная квала:</span>
-                    <span class="pull-right ">${kvpMax}</span>
+                    <span >Максимальная квала:</span><span class="pull-right ">${kvpMax}</span>
                 </div>
             </li>`);
             
@@ -298,7 +302,11 @@ let run = async function () {
         //---------------------------------------------------------
         let $elQuality = $div.find('li:contains("Качество")');
         if ($elQuality.length) {
-            const kvp = floor2(unit['employee_level']);    // квалификация персонала
+            if ($elQuality.length > 1) {
+                $elQuality = $($elQuality[1]);
+            }
+            
+            const kvp = unit['employee_level'] * 1;    // квалификация персонала
             const kvpMax = calcMaxKvalaUser(unit);
             const maxQty = calcEqQualMax(kvp);
             const curQty = floor2(unit['equipment_quality']);
@@ -567,7 +575,9 @@ let run = async function () {
         }, 200);
     }
     
-    waitBlock(initProcess);
+    window.onload = () => {
+        waitBlock(initProcess);
+    };
     
     
     let sheet = document.createElement('style')
