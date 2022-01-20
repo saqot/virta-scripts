@@ -3,7 +3,7 @@
 // @description Дополнительные данные на странице юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.0
+// @version 2.1
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -21,7 +21,7 @@ let run = async function () {
     }
     
     // ==================================================
-    let ver = '2.0';
+    let ver = '2.1';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -364,12 +364,16 @@ let run = async function () {
         //---------------------------------------------------------
         const $blockMenu = $('ul.tabu');
         if ($blockMenu.length) {
-            let $linkMenuCalc = $blockMenu.find('.link-menu-calc');
-            if (!$linkMenuCalc.length) {
-                $linkMenuCalc = $(`<li><a href="" class="link-menu-calc">Калькулятор топ-1</a></li>`);
-                $blockMenu.append($linkMenuCalc);
+            let $ulRow = $blockMenu.find('li.main-menu ul.sub');
+            if (!$ulRow.length) {
+                $ulRow = $blockMenu;
             }
             
+            let $linkMenuCalc = $ulRow.find('.link-menu-calc');
+            if (!$linkMenuCalc.length) {
+                $linkMenuCalc = $(`<li><a href="" class="link-menu-calc">Калькулятор топ-1</a></li>`);
+                $ulRow.append($linkMenuCalc);
+            }
             
             let $modal = $('#calc-modal')
             if (!$modal.length) {
