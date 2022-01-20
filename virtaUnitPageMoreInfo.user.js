@@ -3,7 +3,7 @@
 // @description Дополнительные данные на странице юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.9
+// @version 2.0
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -21,7 +21,7 @@ let run = async function () {
     }
     
     // ==================================================
-    let ver = '1.9';
+    let ver = '2.0';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -62,6 +62,19 @@ let run = async function () {
     // вычисляет максимальный уровень технологии для заданной квалификации игрока
     function calcTechMax(kvala) {
         return (Math.floor(10 * Math.pow(kvala / 0.0064, 1 / 3)) / 10).toFixed(0) * 1;
+    }
+    
+    // вычисляет максимальное кол-во работающих с заданной квалификацией на предприятии для заданной квалификации игрока (топ-1)
+    function calcPersonalTop1(kvala, qp, unitType) {
+        return Math.floor(0.2 * getKoffTop1(unitType) * 14 * kvala * kvala / Math.pow(1.4, qp));
+    }
+    
+    // вычисляет максимальное квалификацию работающих при заданных их численности и квалификации игрока
+    function calcQualTop1(kvala, qp, unitType) {
+        if (qp === 0) {
+            return 0.00;
+        }
+        return Math.log(0.2 * 14 * getKoffTop1(unitType) * kvala * kvala / qp) / Math.log(1.4);
     }
     
     function getUnitForecast(unitID) {
@@ -169,29 +182,8 @@ let run = async function () {
     
     const kvTeh = [0, 1, 1.74, 2.41, 3.03, 3.62, 4.19, 4.74, 5.28, 5.8, 6.31, 6.81, 7.3, 7.78, 8.26, 8.73, 9.19, 9.65, 10.1, 10.54, 10.99, 11.42, 11.86, 12.29, 12.71, 13.13, 13.55, 13.97, 14.38, 14.79, 15.19, 15.6, 16, 16.4, 16.8, 17.19, 17.58, 17.97, 18.36, 18.74, 19.13];
     
-    //---------------------------------------------------------
-    // q - квалификация игрока
-    // qp -  квалификация персонала
-    // вычисляет максимальное кол-во работающих с заданной квалификацией на предприятии для заданной квалификации игрока (топ-1)
-    //---------------------------------------------------------
-    function calcPersonalTop1(q, qp, unitType) {
-        return Math.floor(0.2 * getKoffTop1(unitType) * 14 * q * q / Math.pow(1.4, qp));
-    }
     
-    //---------------------------------------------------------
-    // q - квалификация игрока
-    // p -  численность персонала
-    // вычисляет максимальное квалификацию работающих при заданных их численности и квалификации игрока (обратна calcPersonalTop1())
-    //---------------------------------------------------------
-    function calcQualTop1(q, p, type) {
-        if (p === 0) {
-            return 0.00;
-        }
-        return Math.log(0.2 * 14 * getKoffTop1(type) * q * q / p) / Math.log(1.4);
-    }
-    
-    
-    async function initProcess() {
+    async function initProcess($div) {
         const unit = await getUnitData(unitID);
         const unitType = unit['unit_class_kind'];
         const forecast = await getUnitForecast(unitID); // данные с прогноза
@@ -202,7 +194,7 @@ let run = async function () {
         //---------------------------------------------------------
         // проставляем признак изменения квалы в блоке ТОП МЕНЕДЖЕР
         //---------------------------------------------------------
-        let $elKvala = $('li:contains("Квалификация игрока")')
+        let $elKvala = $div.find('li:contains("Квалификация игрока")')
         if ($elKvala.length) {
             $elKvala = $elKvala.find('span.mono');
             const kvala = await getUserKvala(unit['user_id']);
@@ -219,7 +211,7 @@ let run = async function () {
         //---------------------------------------------------------
         // проставляем занчение нагрузки ТОП3 рабов в блоке ТОП МЕНЕДЖЕР
         //---------------------------------------------------------
-        let $elLaborSummary = $('li:contains("Суммарное количество подчинённых")');
+        let $elLaborSummary = $div.find('li:contains("Суммарное количество подчинённых")');
         if ($elLaborSummary.length) {
             $elLaborSummary = $($elLaborSummary[0]);
             
@@ -247,7 +239,7 @@ let run = async function () {
         //---------------------------------------------------------
         // Квалификация персонала
         //---------------------------------------------------------
-        let $elEmployee = $('li:contains("Квалификация сотр")');
+        let $elEmployee = $div.find('li:contains("Квалификация сотр")');
         if ($elEmployee.length) {
             const kv = unit['competence_value'] * 1;    // квалификация игрока
             const kvp = floor2(unit['employee_level']);    // квалификация персонала
@@ -304,7 +296,7 @@ let run = async function () {
         //---------------------------------------------------------
         // Макс. качество по персоналу
         //---------------------------------------------------------
-        let $elQuality = $('li:contains("Качество")');
+        let $elQuality = $div.find('li:contains("Качество")');
         if ($elQuality.length) {
             const kvp = floor2(unit['employee_level']);    // квалификация персонала
             const kvpMax = calcMaxKvalaUser(unit);
@@ -333,7 +325,7 @@ let run = async function () {
         //---------------------------------------------------------
         // Макс. количество поситетилей по персоналу
         //---------------------------------------------------------
-        let $elCntPos = $('li:contains("Количество посетителей")');
+        let $elCntPos = $div.find('li:contains("Количество посетителей")');
         if ($elCntPos.length) {
             if (['restaurant', 'service_light', 'mine', 'medicine', 'repair', 'educational'].includes(unitType)) {
                 const spec = {
@@ -372,12 +364,12 @@ let run = async function () {
         //---------------------------------------------------------
         const $blockMenu = $('ul.tabu');
         if ($blockMenu.length) {
-            let  $linkMenuCalc = $blockMenu.find('.link-menu-calc');
+            let $linkMenuCalc = $blockMenu.find('.link-menu-calc');
             if (!$linkMenuCalc.length) {
                 $linkMenuCalc = $(`<li><a href="" class="link-menu-calc">Калькулятор топ-1</a></li>`);
                 $blockMenu.append($linkMenuCalc);
             }
-
+            
             
             let $modal = $('#calc-modal')
             if (!$modal.length) {
@@ -474,7 +466,7 @@ let run = async function () {
             
             $linkMenuCalc.on('click', async function (e) {
                 e.preventDefault();
-                $modal.modal("toggle");
+                $modal.modal("show");
                 $('.modal-backdrop').hide();
             });
             
@@ -558,10 +550,11 @@ let run = async function () {
         let time = 0;
         setInterval(function () {
             if (el) {
-                let check = $(el).hasClass("updating")
+                const $el = $(el);
+                let check = $el.hasClass("updating")
                 
                 if (!check && isClassUpdating) {
-                    callback();
+                    callback($el);
                 }
                 isClassUpdating = check;
                 
