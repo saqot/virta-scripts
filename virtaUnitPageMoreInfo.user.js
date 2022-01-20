@@ -3,7 +3,7 @@
 // @description Дополнительные данные на странице юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.6
+// @version 1.7
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -21,7 +21,7 @@ let run = async function () {
     }
     
     // ==================================================
-    let ver = '1.6';
+    let ver = '1.7';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -42,7 +42,7 @@ let run = async function () {
     function calcMaxKvalaUser(unit) {
         const kv = unit['competence_value'] * 1;    // квалификация игрока
         const empCntCur = unit['employee_count'] * 1;
-        return  floor2(calcQualTop1(kv, empCntCur, unit['unit_class_kind']));
+        return floor2(calcQualTop1(kv, empCntCur, unit['unit_class_kind']));
     }
     
     function procVal(num, val) {
@@ -51,12 +51,17 @@ let run = async function () {
     
     // возвращает аргумент округлённым до 2-го знака
     function floor2(val) {
-        return (Math.floor(100 * val) / 100).toFixed(2)*1;
+        return (Math.floor(100 * val) / 100).toFixed(2) * 1;
     }
     
     // вычисляет максимальное качество оборудования/животных для заданной квалификации персонала
     function calcEqQualMax(laborLevel) {
         return floor2(Math.pow(laborLevel, 1.5));
+    }
+    
+    // вычисляет максимальный уровень технологии для заданной квалификации игрока
+    function calcTechMax(kvala) {
+        return (Math.floor(10 * Math.pow(kvala / 0.0064, 1 / 3)) / 10).toFixed(0) * 1;
     }
     
     function getUnitForecast(unitID) {
@@ -162,13 +167,15 @@ let run = async function () {
         return coff[unitType];
     }
     
+    const kvTeh = [0, 1, 1.74, 2.41, 3.03, 3.62, 4.19, 4.74, 5.28, 5.8, 6.31, 6.81, 7.3, 7.78, 8.26, 8.73, 9.19, 9.65, 10.1, 10.54, 10.99, 11.42, 11.86, 12.29, 12.71, 13.13, 13.55, 13.97, 14.38, 14.79, 15.19, 15.6, 16, 16.4, 16.8, 17.19, 17.58, 17.97, 18.36, 18.74, 19.13];
+    
     //---------------------------------------------------------
     // q - квалификация игрока
     // qp -  квалификация персонала
     // вычисляет максимальное кол-во работающих с заданной квалификацией на предприятии для заданной квалификации игрока (топ-1)
     //---------------------------------------------------------
     function calcPersonalTop1(q, qp, unitType) {
-         return Math.floor(0.2 * getKoffTop1(unitType) * 14 * q * q / Math.pow(1.4, qp));
+        return Math.floor(0.2 * getKoffTop1(unitType) * 14 * q * q / Math.pow(1.4, qp));
     }
     
     //---------------------------------------------------------
@@ -190,7 +197,7 @@ let run = async function () {
         const forecast = await getUnitForecast(unitID); // данные с прогноза
         //console.log('unit', unit);
         //console.log('forecast', forecast);
-       
+        
         
         //---------------------------------------------------------
         // проставляем признак изменения квалы в блоке ТОП МЕНЕДЖЕР
@@ -235,7 +242,7 @@ let run = async function () {
         <span class="badge ${badgeColor} badge-roundless pull-right mono">${laborProc}%</span>
         </li>`);
         }
-    
+        
         
         //---------------------------------------------------------
         // Квалификация персонала
@@ -249,7 +256,7 @@ let run = async function () {
             const empCntMax = calcPersonalTop1(kv, kvp, unitType);
             const empCntCur = unit['employee_count'] * 1;
             let weightProc = procVal(empCntMax, empCntCur);
-
+            
             
             let nameEmp = 'рабов';
             let maxEmp = `<div class="text-muted small clearfix">
@@ -303,7 +310,7 @@ let run = async function () {
             const kvpMax = calcMaxKvalaUser(unit);
             const maxQty = calcEqQualMax(kvp);
             const curQty = floor2(unit['equipment_quality']);
-
+            
             
             const textColorQty = (curQty > maxQty || kvp > kvpMax) ? 'text-danger' : '';
             
@@ -312,14 +319,14 @@ let run = async function () {
                     <span >Макс. качество по персоналу (под ${kvp}):</span><span class="pull-right ${textColorQty}">${maxQty}</span>
                 </div>
             </div>`);
-    
+            
             if (kvp > kvpMax) {
                 const maxQtyForMaxKvala = calcEqQualMax(kvpMax);
                 $elQuality.append(`<div class="st-notice small">
                     Максимальное качество по персоналу <b>${maxQty}</b> выше, чем возможное максимальное качество <b>${maxQtyForMaxKvala}</b>. Ориентироваться стоит под <b>${maxQtyForMaxKvala}</b>.
                 </div>`);
             }
-
+            
             
         }
         
@@ -360,6 +367,184 @@ let run = async function () {
             }
         }
         
+        //---------------------------------------------------------
+        // Калькулятор топ-1
+        //---------------------------------------------------------
+        const $blockMenu = $('ul.tabu');
+        if ($blockMenu.length) {
+            const $linkMenuCalc = $(`<li><a href="">Калькулятор топ-1</a></li>`);
+            $blockMenu.append($linkMenuCalc);
+            
+            let $modal = $('#calc-modal')
+            if (!$modal.length) {
+                $modal = $('<div class="modal fade calc-modal" id="calc-modal" data-backdrop="static" data-keyboard="false" tabindex="-1"  aria-hidden="true">' +
+                    '  <div class="modal-dialog modal-sm">' +
+                    '    <div class="modal-content">' +
+                    '      <div class="modal-header">' +
+                    '        <h1 class="modal-title" >Калькулятор ТОП-1</h1>' +
+                    '        <button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
+                    '          <span aria-hidden="true">&times;</span>' +
+                    '        </button>' +
+                    '      </div>' +
+                    '      <div class="modal-body">' +
+                    
+                    
+                    '<ul class="list-group vir-list-group-strypes">' +
+                    '     <li class="list-group-item ">' +
+                    '       <div class="pull-left col1">Квалификация ТОПа</div>' +
+                    '       <div class="pull-right col2"><input class="form-control" id="calcTopKv" type="text" value=""></div>' +
+                    '     </li>' +
+                    '' +
+                    '     <li class="list-group-item ">' +
+                    '       <div class="pull-left col1">Технология <span id="maxTopTechHelp" class="text-muted small"></span></div>' +
+                    '       <div class="pull-right col2"><input class="form-control" id="calcTopTech" type="text" value=""></div>' +
+                    '     </li>' +
+                    '' +
+                    '     <li class="list-group-item ">' +
+                    '       <div class="pull-left col1">Количество рабов</div>' +
+                    '       <div class="pull-right col2"><input class="form-control" id="calcTopCntRab" type="text" value=""></div>' +
+                    '     </li>' +
+                    '' +
+                    '     <li class="list-group-item ">' +
+                    '       <div class="pull-left col1">Квалификация рабов</div>' +
+                    '       <div class="pull-right col2"><input class="form-control" id="calcTopKvRab" type="text" value=""></div>' +
+                    '     </li>' +
+                    '' +
+                    '     <li class="list-group-item ">' +
+                    '       <h1 class="modal-title" >Рассчет</h1>' +
+                    '     </li>' +
+                    '' +
+                    '     <li class="list-group-item ">' +
+                    '       <div class="pull-left col1">Максимальная технология по данной квалификации</div>' +
+                    '       <div class="pull-right col2"><span class="res" id="maxTopTech">--</span></div>' +
+                    '     </li>' +
+                    '' +
+                    '     <li class="list-group-item ">' +
+                    '       <div class="pull-left col1">Максимальное количество рабов при данной квалификации</div>' +
+                    '       <div class="pull-right col2"><span class="res" id="maxTopCntRab">--</span></div>' +
+                    '     </li>' +
+                    '' +
+                    '     <li class="list-group-item ">' +
+                    '       <div class="pull-left col1">Максимальная квала персонала при данном количестве</div>' +
+                    '       <div class="pull-right col2"><span class="res" id="maxTopKvRab">--</span></div>' +
+                    '     </li>' +
+                    '' +
+                    '     <li class="list-group-item ">' +
+                    '       <div class="pull-left col1">Минимальная квала по данной технолигии</div>' +
+                    '       <div class="pull-right col2"><span class="res" id="maxTopRabTech">--</span></div>' +
+                    '     </li>' +
+                    '' +
+                    '     <li class="list-group-item ">' +
+                    '       <div class="pull-left col1">Максимальное качество оборудования при данной квалификации персонала</div>' +
+                    '       <div class="pull-right col2"><span class="res" id="maxTopOb">--</span></div>' +
+                    '     </li>' +
+                    '' +
+                    '     <li class="list-group-item ">' +
+                    '       <div class="pull-left col1">Качество оборудования по данной технолигии</div>' +
+                    '       <div class="pull-right col2"><span class="res" id="maxTopObTech">--</span></div>' +
+                    '     </li>' +
+                    '' +
+                    '  </ul>' +
+                    
+                    
+                    '      </div>' +
+                    '    </div>' +
+                    '  </div>' +
+                    '</div>')
+                $('body').append($modal);
+            }
+            
+            const $inpCalcTopKv = $modal.find('#calcTopKv');
+            const $inpCalcTopTech = $modal.find('#calcTopTech');
+            const $inpCalcTopCntRab = $modal.find('#calcTopCntRab');
+            const $inpCalcTopKvRab = $modal.find('#calcTopKvRab');
+            
+            const $sMaxTopTechHelp = $modal.find('#maxTopTechHelp');
+            const $sMaxTopTech = $modal.find('#maxTopTech');
+            const $sMaxTopCntRab = $modal.find('#maxTopCntRab');
+            const $sMaxTopKvRab = $modal.find('#maxTopKvRab');
+            const $sMaxTopRabTech = $modal.find('#maxTopRabTech');
+            const $sMaxTopOb = $modal.find('#maxTopOb');
+            const $sMaxTopObTech = $modal.find('#maxTopObTech');
+            
+            
+            $linkMenuCalc.on('click', async function (e) {
+                e.preventDefault();
+                $modal.modal("toggle");
+                $('.modal-backdrop').hide();
+            });
+            
+            $modal.on('show.bs.modal', function () {
+                const kv = unit['competence_value'] * 1;    // квалификация игрока
+                $inpCalcTopKv.val(kv);
+                
+                const tech = unit['technology_level'] * 1;    // технология юнита
+                $inpCalcTopTech.val(tech);
+                
+                const empCnt = unit['employee_count'] * 1;    // Количество рабов
+                $inpCalcTopCntRab.val(empCnt);
+                
+                const empLvl = unit['employee_level'] * 1;    // Квала рабов
+                $inpCalcTopKvRab.val(empLvl);
+                
+                calcAndShowResModal();
+            })
+            
+            const $inputs = $modal.find('input');
+            
+            $inputs.on('change paste keyup', function () {
+                let v = this.value;
+                
+                
+                v = v.replace(/,/g, ".");
+                
+                if (v.indexOf('.') !== -1) {
+                    v = v.replace(/[^\d.]/g, '');
+                } else {
+                    v = parseInt(v, 10);
+                }
+                
+                v = v < v * -1 ? 0 : v;
+                v = isNaN(v) ? 0 : v;
+                
+                $(this).val(v);
+                
+                calcAndShowResModal();
+            });
+            
+            function calcAndShowResModal() {
+                const kv = $inpCalcTopKv.val();         // квалификация игрока
+                const tech = $inpCalcTopTech.val();    // технология юнита
+                const empCnt = $inpCalcTopCntRab.val(); // Количество рабов
+                const empLvl = $inpCalcTopKvRab.val();  // Квала рабов
+                
+                
+                const techMax = calcTechMax(kv);
+                $sMaxTopTechHelp.html(`(max ${techMax})`);
+                $sMaxTopTech.html(techMax);
+                
+                const empCnt_ = calcPersonalTop1(kv, empLvl, unitType);
+                $sMaxTopCntRab.html(empCnt_);
+                
+                const maxLvl = floor2(calcQualTop1(kv, empCnt, unitType));
+                $sMaxTopKvRab.html(maxLvl);
+                
+                const kvpMax = floor2(kvTeh[tech]);
+                $sMaxTopRabTech.html(kvpMax);
+                
+                const maxEq = calcEqQualMax(empLvl);
+                $sMaxTopOb.html(maxEq);
+                
+                const maxTechEq = calcEqQualMax(kvpMax);
+                $sMaxTopObTech.html(maxTechEq);
+                
+            }
+            
+            // $linkMenuCalc.trigger("click");
+            
+        }
+        
+        
     }
     
     let isClassUpdating = true;
@@ -394,6 +579,34 @@ let run = async function () {
         .st-notice {
             background-color: #FDECC9;
             padding: 4px;
+        }
+        .calc-modal {
+            left: auto;
+            width: 350px;
+            font-size: 12px;
+        }
+        .calc-modal h1 {
+            font-size: 12px;
+        }
+        .calc-modal .list-group-item  {
+           padding: 10px 0px;
+        }
+        .calc-modal .col1  {
+           width: 190px;
+        }
+        .calc-modal .col2  {
+           width: 70px;
+        }
+        .col2 input{
+          height: 22px;
+          text-align: right;
+          padding: 1px 6px;
+        }
+        .calc-modal .res  {
+           display: block;
+           background-color: #FDECC9;
+           padding: 8px 6px;
+           text-align: right;
         }
         `;
     document.body.appendChild(sheet);
