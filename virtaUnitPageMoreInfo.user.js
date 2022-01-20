@@ -3,7 +3,7 @@
 // @description Дополнительные данные на странице юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.5
+// @version 1.6
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -21,7 +21,7 @@ let run = async function () {
     }
     
     // ==================================================
-    let ver = '1.5';
+    let ver = '1.6';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -39,18 +39,24 @@ let run = async function () {
         return;
     }
     
+    function calcMaxKvalaUser(unit) {
+        const kv = unit['competence_value'] * 1;    // квалификация игрока
+        const empCntCur = unit['employee_count'] * 1;
+        return  floor2(calcQualTop1(kv, empCntCur, unit['unit_class_kind']));
+    }
+    
     function procVal(num, val) {
         return Math.round(val / (num / 100) * 100) / 100;
     }
     
     // возвращает аргумент округлённым до 2-го знака
     function floor2(val) {
-        return (Math.floor(100 * val) / 100).toFixed(2);
+        return (Math.floor(100 * val) / 100).toFixed(2)*1;
     }
     
     // вычисляет максимальное качество оборудования/животных для заданной квалификации персонала
     function calcEqQualMax(laborLevel) {
-        return Math.floor(100 * Math.pow(laborLevel, 1.5)) / 100;
+        return floor2(Math.pow(laborLevel, 1.5));
     }
     
     function getUnitForecast(unitID) {
@@ -66,7 +72,6 @@ let run = async function () {
                 global     : false,
                 dataType   : "json",
                 success    : function (res) {
-                    //console.log('forecast', res);
                     resolve(res);
                 },
                 error      : function (jqXHR, textStatus, error) {
@@ -89,7 +94,6 @@ let run = async function () {
                 global     : false,
                 dataType   : "json",
                 success    : function (res) {
-                    //console.log('unit', res);
                     resolve(res);
                 },
                 error      : function (jqXHR, textStatus, error) {
@@ -112,7 +116,6 @@ let run = async function () {
                 global     : false,
                 dataType   : "json",
                 success    : function (data) {
-                    //console.log('competences', data);
                     const kvala = {};
                     Object.entries(data).forEach(([key, v]) => {
                         let kk = v['kind'];
@@ -165,10 +168,7 @@ let run = async function () {
     // вычисляет максимальное кол-во работающих с заданной квалификацией на предприятии для заданной квалификации игрока (топ-1)
     //---------------------------------------------------------
     function calcPersonalTop1(q, qp, unitType) {
-        if ((unitType === 'office')) {
-            return Math.floor(14 * q * q / Math.pow(1.4, qp) / 4.15);
-        }
-        return Math.floor(0.2 * getKoffTop1(unitType) * 14 * q * q / Math.pow(1.4, qp));
+         return Math.floor(0.2 * getKoffTop1(unitType) * 14 * q * q / Math.pow(1.4, qp));
     }
     
     //---------------------------------------------------------
@@ -180,19 +180,17 @@ let run = async function () {
         if (p === 0) {
             return 0.00;
         }
-        if (type === 'office') {
-            return Math.log(14 / 4.15 * q * q / p) / Math.log(1.4);
-        }
         return Math.log(0.2 * 14 * getKoffTop1(type) * q * q / p) / Math.log(1.4);
     }
     
     
     async function initProcess() {
-        
-        
         const unit = await getUnitData(unitID);
         const unitType = unit['unit_class_kind'];
-        const forecast = await getUnitForecast(unitID);
+        const forecast = await getUnitForecast(unitID); // данные с прогноза
+        //console.log('unit', unit);
+        //console.log('forecast', forecast);
+       
         
         //---------------------------------------------------------
         // проставляем признак изменения квалы в блоке ТОП МЕНЕДЖЕР
@@ -237,20 +235,21 @@ let run = async function () {
         <span class="badge ${badgeColor} badge-roundless pull-right mono">${laborProc}%</span>
         </li>`);
         }
+    
         
         //---------------------------------------------------------
         // Квалификация персонала
         //---------------------------------------------------------
         let $elEmployee = $('li:contains("Квалификация сотр")');
         if ($elEmployee.length) {
-            const kv = forecast['competence_value'] * 1;    // квалификация игрока
-            const kvp = floor2(forecast['labor_level']);    // квалификация персонала
+            const kv = unit['competence_value'] * 1;    // квалификация игрока
+            const kvp = floor2(unit['employee_level']);    // квалификация персонала
+            const kvpMax = calcMaxKvalaUser(unit);
             
             const empCntMax = calcPersonalTop1(kv, kvp, unitType);
             const empCntCur = unit['employee_count'] * 1;
             let weightProc = procVal(empCntMax, empCntCur);
-            const kvalaMax = floor2(calcQualTop1(kv, empCntCur, unitType));
-            
+
             
             let nameEmp = 'рабов';
             let maxEmp = `<div class="text-muted small clearfix">
@@ -266,6 +265,7 @@ let run = async function () {
             }
             
             const textColorProc = weightProc > 100 ? 'text-danger' : '';
+            const textColorKvp = kvpMax < kvp ? 'text-danger' : '';
             
             $elEmployee.hide();
             
@@ -283,11 +283,11 @@ let run = async function () {
             $elEmployee.after(`<li class="list-group-item">
                 <div class="clearfix">
                     <div class="pull-left">Квалификация сотр. <span class="text-muted">(требуется ${unit['employee_level_required']})</span></div>
-                    <div class="pull-right mono">${kvp}</div>
+                    <div class="pull-right ${textColorKvp}">${kvp}</div>
                 </div>
                 <div class="text-muted small clearfix">
                     <span >Максимальная квала:</span>
-                    <span class="pull-right ">${kvalaMax}</span>
+                    <span class="pull-right ">${kvpMax}</span>
                 </div>
             </li>`);
             
@@ -299,16 +299,27 @@ let run = async function () {
         //---------------------------------------------------------
         let $elQuality = $('li:contains("Качество")');
         if ($elQuality.length) {
-            const maxQty = calcEqQualMax(forecast['labor_level'] * 1);
+            const kvp = floor2(unit['employee_level']);    // квалификация персонала
+            const kvpMax = calcMaxKvalaUser(unit);
+            const maxQty = calcEqQualMax(kvp);
             const curQty = floor2(unit['equipment_quality']);
-            // const curQtyReq = floor2(unit['equipment_quality_required']);
+
             
-            const textColorQty = curQty > maxQty ? 'text-danger' : '';
+            const textColorQty = (curQty > maxQty || kvp > kvpMax) ? 'text-danger' : '';
             
             $elQuality.append(`<div class="text-muted small">
-                <span >Макс. качество по персоналу:</span>
-                <span class="pull-right ${textColorQty}">${maxQty}</span>
+                <div>
+                    <span >Макс. качество по персоналу (под ${kvp}):</span><span class="pull-right ${textColorQty}">${maxQty}</span>
+                </div>
             </div>`);
+    
+            if (kvp > kvpMax) {
+                const maxQtyForMaxKvala = calcEqQualMax(kvpMax);
+                $elQuality.append(`<div class="st-notice small">
+                    Максимальное качество по персоналу <b>${maxQty}</b> выше, чем возможное максимальное качество <b>${maxQtyForMaxKvala}</b>. Ориентироваться стоит под <b>${maxQtyForMaxKvala}</b>.
+                </div>`);
+            }
+
             
         }
         
@@ -380,12 +391,9 @@ let run = async function () {
             clear: both;
             content: "";
         }
-        input.form-mini {
-            text-align: right;
-            height: 20px;
-            width: 80px !important;
-            padding: 0 4px;
-            margin: 0 10px;
+        .st-notice {
+            background-color: #FDECC9;
+            padding: 4px;
         }
         `;
     document.body.appendChild(sheet);
