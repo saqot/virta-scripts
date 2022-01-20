@@ -159,12 +159,16 @@ let run = async function () {
     
     const $blockNew = $('ul.tabu');
     if ($blockNew.length) {
-        $iconClearCache = $(`<li><a href="">Очистить кеш</a></li>`);
-        $blockNew.append($iconClearCache);
+        const $liRow = $(`<li class="sub main-menu"><a class="">Доп. операции</a><ul class="sub"></ul></li>`);
+        $blockNew.append($liRow);
+        const $ulRow = $liRow.find('ul.sub')
+        
+        $iconClearCache = $(`<li><a href="" class="tabs">Очистить кеш</a></li>`);
+        $ulRow.append($iconClearCache);
         
         if (userInfo['company_id'] === '10090070') {
-            $iconDelete = $(`<li><a href="" >Удалить юнит</a></li>`);
-            $blockNew.append($iconDelete);
+            $iconDelete = $(`<li><a href="" class="tabs">Удалить юнит</a></li>`);
+            $ulRow.append($iconDelete);
         }
         
     } else {
@@ -838,7 +842,6 @@ let run = async function () {
                             global     : false,
                             dataType   : "json",
                             success    : function (res) {
-                                // resolve(res.data);
                                 resolve(Object.keys(res.data)[0]);
                             },
                             error      : function (jqXHR, textStatus, error) {
@@ -932,6 +935,9 @@ let run = async function () {
         .process-block > .alert {
             margin: 0 !important;
             padding: 0px 5px !important;
+        }
+        .main-menu:hover ul{
+           display: block !important;
         }
         `;
     document.body.appendChild(sheet);
