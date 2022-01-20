@@ -3,7 +3,7 @@
 // @description Очистка кеша юнита + Удаление юнита + Завоз все ассортимента товара с указанного склада + Вывоз остатков с магазина на склад
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.7
+// @version 2.8
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -15,7 +15,7 @@ let run = async function () {
     $ = win.$;
     
     // ==================================================
-    let ver = '2.7';
+    let ver = '2.8';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
