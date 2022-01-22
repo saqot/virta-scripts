@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name VIRTA::Mass Create Units
-// @description Оптовое создание юнитов в виртономике.
+// @description Оптовое создание юнитов.
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.7
+// @version 1.8
 // @include https://virtonomica.ru/vera/main/unit/create/*
 // @include https://virtonomica.ru/vera/main/unit/create/*#confirm-modal
 // @run-at document-idle
@@ -16,14 +16,14 @@ let run = function () {
 	$ = win.$;
 	
 	// ==================================================
-	let ver = '1.7';
+	let ver = '1.8';
 	
 	function consoleEcho(text, isRrror = false) {
 		const bg = isRrror === true ? '#af1a00' : '#3897c7'
 		console.log(`\n %c VIRTA::MCU / ${ver} %c ${text} \n\n`, 'color: #FFFFFF; background: #030307; padding:5px 0;', `color: #FFFFFF; background: ${bg}; padding:5px 0;`);
 	}
 	
-	consoleEcho('Оптовое создание юнитов в виртономике');
+	consoleEcho('Оптовое создание юнитов');
 	// ==================================================
 	
 	// ==================================================
@@ -72,52 +72,69 @@ let run = function () {
 			
 			let el = document.getElementById('confirm-modal');
 			if (el) {
-				if ($(el).is(':visible') === true) {
+				const $elModal = $(el);
+				if ($elModal.is(':visible') === true) {
 					clearInterval(poops);
-					callback(el);
+					callback($elModal);
 				}
 				
 			}
-			time += 100;
-		}, 100);
+			time += 200;
+		}, 200);
 	}
 	
 	waitForElement(initMassCreate);
 	
-	function initMassCreate() {
+	function initMassCreate($modal) {
 		// отслеживаем закрытие окна, что бы запустить мониторинг открытия
-		$('#confirm-modal').on('click', function (e) {
-			e.preventDefault();
+		$modal.on('hidden.bs.modal', function (e) {
 			setTimeout(function () {
-				if (!$('#confirm-modal').is(':visible')) {
-					waitForElement(initMassCreate);
-				}
-			}, 1000);
-		});
+				waitForElement(initMassCreate);
+			}, 500);
+		})
+		
 		
 		// ---------------------------
-		const $modal = $('.confirm-dialog');
 		const $modalFooter = $modal.find('.modal-footer');
-		
-		if (!$modal.hasClass('modifed-mass')) {
-			$modal.addClass('modifed-mass');
-			
+
+		const $modifedMass = $modal.find('.modifed-mass')
+		if (!$modifedMass.length) {
 			$modal.find('.modal-body').append('' +
 				'<div class="row">' +
-				'   <div class="col-sm-12 unit-cnt" style="margin-top: 10px;">\n' +
-				'       <span class="margin-5-left">Количество юнитов:</span>\n' +
-				'       <span class="pull-right width20"><input class="form-control" id="unit-cnt" type="number" value="1"></span>\n' +
+				'   <div class="col-sm-12 unit-cnt" style="margin-top: 10px;">' +
+				'       <span class="margin-5-left">Количество юнитов:</span>' +
+				'       <span class="pull-right width20"><input class="form-control" id="unit-cnt" type="number" value="1"></span>' +
 				'       <span class="pull-right width40 mass-actions">' +
 				'           <span class="badge badge-success badge-roundless pull-right mono" style="margin: 0 10px; line-height: 23px !important; height: 28px; padding: 3px 10px;">' +
-				'           <span class="mass-icon" >⏸</span>' +
-				'           <span class="mass-info" style="margin-left: 10px;"></span>' +
-				'</span>' +
-				'       </span>\n' +
-				'   </div>\n' +
+				'           	<span class="mass-icon" >⏸</span>' +
+				'           	<span class="mass-info" style="margin-left: 10px;"></span>' +
+				'           </span>' +
+				'       </span>' +
+				'   </div>' +
 				'</div>');
 			
 			$modalFooter.append('<button type="button" class="btn btn-danger btn-sm btn-circle btn-build-mass">Создать несколько</button>');
 		}
+		
+		const $strName = $('<div></div>');
+		//$strName.addClass('pull-left');
+		
+		const $inpName = $modal.find('#unit-name');
+		const inpNameVal = $inpName.val();
+		const inpNameValNew = `${inpNameVal} mass.{num}`;
+		$inpName.val(inpNameValNew);
+		
+		$inpName.after($strName);
+		eventModifeName($strName, inpNameValNew);
+		
+		$inpName.on('change paste keyup', function () {
+			eventModifeName($strName, this.value);
+		});
+		
+		
+		
+		
+
 		
 		
 		const $btm = $modal.find('.btn-build-mass');
@@ -219,6 +236,12 @@ let run = function () {
 		$MODAL_INPS.removeClass('disabled');
 	}
 	
+	function eventModifeName($strName, inpNameVal) {
+		const inpNameValNew = inpNameVal.replace(/{num}/gi, '1');
+		
+		$strName.html(`<span class="small text-muted">Название при создании:</span></br><span class="prew-mass">${inpNameValNew}</span>`)
+	}
+	
 	function loopSend() {
 		if (IS_PAUSE === true) {
 			return;
@@ -231,7 +254,8 @@ let run = function () {
 		LOOP_X++;
 		$LOOP_INFO.html(`Выполняем ${LOOP_X}/${LOOP_ALL}`);
 		const data_ = Object.assign({}, data);
-		data_.name = `${data_.name} mass.${LOOP_X}`;
+		
+		data_.name = data_.name.replace(/{num}/gi, LOOP_X);
 		
 		data_.kind = UnitCreateWizard.get('unittype').kind;
 		data_.args = {
@@ -266,6 +290,16 @@ let run = function () {
 		
 	}
 	
+	let sheet = document.createElement('style')
+	sheet.innerHTML = `
+        .prew-mass  {
+           display: block;
+           background-color: #FDECC9;
+           padding: 3px 6px;
+           font-size: 11px;
+        }
+        `;
+	document.body.appendChild(sheet);
 }
 
 if (window.top === window) {
