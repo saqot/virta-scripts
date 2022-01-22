@@ -3,7 +3,7 @@
 // @description Дополнительные данные на странице юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.4
+// @version 2.5
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -15,13 +15,13 @@ let run = async function () {
     $ = win.$;
     
     // проверка на точность соответсвия страницы
-    const t = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)($|\/$|\?)/)
+    const t = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)($|\/virtasement|\/$|#|\?)/)
     if (!t) {
         return;
     }
     
     // ==================================================
-    let ver = '2.4';
+    let ver = '2.5';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -190,9 +190,9 @@ let run = async function () {
         const unit = await getUnitData(unitID);
         const unitType = unit['unit_class_kind'];
         const forecast = await getUnitForecast(unitID); // данные с прогноза
-        console.log('unit', unit);
+        //console.log('unit', unit);
         //console.log('forecast', forecast);
-        console.log('unitType', unitType);
+        //console.log('unitType', unitType);
         
         // исключаем заведомо не нужные
         if (['villa', 'network', 'warehouse'].includes(unitType)) {
@@ -556,22 +556,111 @@ let run = async function () {
         
     }
     
-    let el = document.getElementById('unit-info');
+    let elUnit = document.getElementById('unit-info');
+    if (elUnit !== null) {
+        setTimeout(() => {
+            initProcess($(elUnit));
+        }, 500);
     
-    setTimeout(() => {
-        initProcess($(el));
-    }, 500);
-    
-    new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.oldValue === 'updating') {
-                initProcess($(mutation.target))
-            }
-        });
+        new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.oldValue.indexOf('updating') !== -1) {
+                    initProcess($(mutation.target));
+                }
+            });
         
-    }).observe(el, {attributes: true, attributeOldValue: true, attributeFilter: ['class']});
+        }).observe(elUnit, {attributes: true, attributeOldValue: true, attributeFilter: ['class']});
+    }
+    // ------------------------------------------------------
+    //
+    // ------------------------------------------------------
+    
+    // ------------------------------------------------------
+    // дополнительные данные для списка конкурентов по услугам
+    // ------------------------------------------------------
+    async function initProcessSalers($div) {
+        const $table = $div.find('table');
+    
+        const $thCollMat = $table.find('th:contains("Расходные материалы")');
+        $thCollMat.css({ 'max-width': "110px" });
+        
+        const $thColl = $table.find('th:contains("Качество")');
+        const idxColl = $table.find('thead th').index($thColl);
+
+        const $trs = $table.find('tbody tr');
+        $trs.each(async function () {
+            const $tdBlock2 = $(this).find(`td:eq(1)`);
+            const txtBlock2 = $tdBlock2.html();
+            $tdBlock2.html(txtBlock2.replace(/рабочих мест/g, "мест"));
+            
+            const href = $(this).find("td:eq(0) a:eq(0)").attr('href');
+            const m = href.match(/\/(\w+)\/main\/unit\/view\/(\d+)/);
+            const unitUserID = m[2];
+            const unit = await getUnitData(unitUserID);
+    
+            const $tdBlock = $(this).find(`td:eq(${idxColl})`);
+
+    
+            let eqQuality = floor2(unit['equipment_quality']);
+            let empQuality = floor2(unit['employee_level']);
+            $tdBlock.html(`
+            <div class="clearfix" style="min-width: 140px;">
+                <div class="text-muted pull-left">оборудоване: </div>
+                <div class="pull-right">${eqQuality} / ${unit['equipment_count']}</div>
+            </div>
+             <div class="clearfix">
+                <div class="text-muted pull-left">сотрудники: </div>
+                <div class="pull-right">${empQuality} / ${unit['employee_count']}</div>
+            </div>
+
+            `);
+        });
+    }
+    
+    function waitServiceUnits(el) {
+        new MutationObserver((mrs) => {
+            mrs.forEach((mr) => {
+                if (mr.oldValue.indexOf('updating') !== -1) {
+                    initProcessSalers($(mr.target));
+                }
+            });
+        
+        }).observe(el, {attributes: true, attributeOldValue: true, attributeFilter: ['class']});
+    }
     
     
+    // поиск таблицы на странице
+    const elListSalers = document.getElementById('service-units');
+    if (elListSalers !== null) {
+        waitServiceUnits(elListSalers);
+    }
+    
+    // поиск таблицы на мобальном окне
+    let marketing2modal = document.getElementById('marketing2-modal');
+    if (marketing2modal !== null) {
+        new MutationObserver((mrs) => {
+            mrs.forEach((mr) => {
+                if (mr.oldValue.indexOf('updating') !== -1) {
+                    const elListSalers2 = document.getElementById('service-units');
+                    if (elListSalers2 !== null) {
+                        waitServiceUnits(elListSalers2);
+                    }
+                }
+            });
+        
+        }).observe(marketing2modal, {attributes: true, attributeOldValue: true, attributeFilter: ['class']});
+    }
+    // ------------------------------------------------------
+    //
+    // ------------------------------------------------------
+    
+    
+    
+
+    
+    // ------------------------------------------------------
+    // style
+    // ------------------------------------------------------
     let sheet = document.createElement('style')
     sheet.innerHTML = `
         .clearfix::after {
