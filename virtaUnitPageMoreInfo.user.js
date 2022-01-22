@@ -3,7 +3,7 @@
 // @description Дополнительные данные на странице юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.2
+// @version 2.3
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -21,7 +21,7 @@ let run = async function () {
     }
     
     // ==================================================
-    let ver = '2.2';
+    let ver = '2.3';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -121,7 +121,7 @@ let run = async function () {
         });
     }
     
-    function getUserKvala(userID) {
+    function getUserKvala(userID, kind) {
         return new Promise((resolve) => {
             $.ajax({
                 async      : true,
@@ -135,14 +135,17 @@ let run = async function () {
                 dataType   : "json",
                 success    : function (data) {
                     const kvala = {};
-                    Object.entries(data).forEach(([key, v]) => {
+                    
+                    for (const k in data) {
+                        const v = data[k];
                         let kk = v['kind'];
                         v['delta'] = (parseFloat(v['delta']) * 100);
                         v['progress'] = parseFloat(v['progress']);
                         v['step'] = v['delta'] > v['progress'];
                         kvala[kk] = v;
-                    });
-                    resolve(kvala);
+                    }
+                    
+                    resolve(kvala[kind]);
                 },
                 error      : function (jqXHR, textStatus, error) {
                     consoleEcho(`FAIL (ajax) {textStatus=${textStatus} , error=${error}}`, true);
@@ -202,10 +205,10 @@ let run = async function () {
         let $elKvala = $div.find('li:contains("Квалификация игрока")')
         if ($elKvala.length) {
             $elKvala = $elKvala.find('span.mono');
-            const kvala = await getUserKvala(unit['user_id']);
             const v = $elKvala.text().trim();
             
-            const kvalaUnit = kvala[unit['knowledge_area_kind']];
+            const kvalaUnit = await getUserKvala(unit['user_id'], unit['knowledge_area_kind']);
+            
             if (kvalaUnit['step']) {
                 $elKvala.html(`${v} <sup class="text-success">+1 (${kvalaUnit['progress']}%)</sup>`);
             } else {
@@ -548,36 +551,25 @@ let run = async function () {
                 
             }
             
-            // $linkMenuCalc.trigger("click");
-            
         }
         
         
     }
     
-    let isClassUpdating = true;
     let el = document.getElementById('unit-info');
     
-    function waitBlock(callback) {
-        let time = 0;
-        setInterval(function () {
-            if (el) {
-                const $el = $(el);
-                let check = $el.hasClass("updating")
-                
-                if (!check && isClassUpdating) {
-                    callback($el);
-                }
-                isClassUpdating = check;
-                
-            }
-            time += 200;
-        }, 200);
-    }
+    setTimeout(() => {
+        initProcess($(el));
+    }, 500);
     
-    window.onload = () => {
-        waitBlock(initProcess);
-    };
+    new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.oldValue === 'updating') {
+                initProcess($(mutation.target))
+            }
+        });
+        
+    }).observe(el, {attributes: true, attributeOldValue: true, attributeFilter: ['class']});
     
     
     let sheet = document.createElement('style')
