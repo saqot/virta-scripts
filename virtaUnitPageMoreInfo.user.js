@@ -3,7 +3,7 @@
 // @description Дополнительные данные на странице юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.8
+// @version 2.9
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -15,13 +15,13 @@ let run = async function () {
     $ = win.$;
     
     // проверка на точность соответсвия страницы
-    const t = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)($|\/virtasement|\/$|#|\?)/)
+    const t = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)($|\/$|#|\?)/)
     if (!t) {
         return;
     }
     
     // ==================================================
-    let ver = '2.8';
+    let ver = '2.9';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -190,9 +190,9 @@ let run = async function () {
         const unit = await getUnitData(unitID);
         const unitType = unit['unit_class_kind'];
         const forecast = await getUnitForecast(unitID); // данные с прогноза
-        console.log('unit', unit);
+        //console.log('unit', unit);
         //console.log('forecast', forecast);
-        console.log('unitType', unitType);
+        //console.log('unitType', unitType);
         
         // исключаем заведомо не нужные
         if (['villa', 'network', 'warehouse'].includes(unitType)) {
