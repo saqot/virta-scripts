@@ -3,7 +3,7 @@
 // @description Дополнительные данные на странице юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.7
+// @version 2.8
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -21,7 +21,7 @@ let run = async function () {
     }
     
     // ==================================================
-    let ver = '2.7';
+    let ver = '2.8';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -585,141 +585,6 @@ let run = async function () {
     // ------------------------------------------------------
     //
     // ------------------------------------------------------
-    
-    // ------------------------------------------------------
-    // дополнительные данные для списка конкурентов по услугам
-    // ------------------------------------------------------
-    async function initProcessSalers($div) {
-        const $table = $div.find('table');
-    
-        const $thCollMat = $table.find('th:contains("Расходные материалы")');
-        $thCollMat.css({ 'max-width': "110px" });
-    
-        const $ths = $table.find('thead th');
-    
-    
-        
-        const $thCollSize = $table.find('th:contains("Размер")');
-        const idxCollSize = $ths.index($thCollSize);
-        
-        const $thCollDistrict = $table.find('th:contains("Район города")');
-        const idxCollDistrict = $ths.index($thCollDistrict);
-        
-        const $thCollSales = $table.find('th:contains("Объем продаж")');
-        const idxCollSales = $ths.index($thCollSales);
-        
-        const $thCollPrice = $table.find('th:contains("Цена")');
-        const idxCollPrice = $ths.index($thCollPrice);
-        
-        const $thCollQl = $table.find('th:contains("Качество")');
-        const idxCollQl = $ths.index($thCollQl);
-
-        const $trs = $table.find('tbody tr');
-        $trs.each(async function () {
-            if (idxCollSize !== -1) {
-                const $tdBlockSize = $(this).find(`td:eq(${idxCollSize})`);
-                const txtSize = $tdBlockSize.html();
-                $tdBlockSize.html(txtSize.replace(/рабочих мест/g, "мест"));
-            }
-            
-            if (idxCollPrice !== -1) {
-                const $tdBlockPrice = $(this).find(`td:eq(${idxCollPrice})`);
-                const txtBlockPrice = $tdBlockPrice.html();
-                $tdBlockPrice.html(txtBlockPrice.replace(/.00$/g, ""));
-            }
-            
-            if (idxCollDistrict !== -1) {
-                const $tdBlockDistrict = $(this).find(`td:eq(${idxCollDistrict})`);
-                let txtDistrict = $tdBlockDistrict.html();
-                txtDistrict = txtDistrict.replace(/ район| города/g, "");
-                txtDistrict = txtDistrict.replace(/Фешенебельный/g, "Фешка");
-                $tdBlockDistrict.html(txtDistrict);
-            }
-    
-            if (idxCollSales !== -1) {
-                const $tdBlockSales = $(this).find(`td:eq(${idxCollSales})`);
-                let txtSales = $tdBlockSales.html();
-                txtSales = txtSales.replace(/около/g, "~");
-                txtSales = txtSales.replace(/более/g, ">");
-                txtSales = txtSales.replace(/менее/g, "<");
-                $tdBlockSales.html(txtSales);
-            }
-
-            
-            const unitUserID = findUnitUserID($(this).find("td:eq(0) a"))
-            const unit = await getUnitData(unitUserID);
-    
-            const $tdBlock = $(this).find(`td:eq(${idxCollQl})`);
-
-    
-            let eqQuality = floor2(unit['equipment_quality']);
-            let empQuality = floor2(unit['employee_level']);
-            $tdBlock.html(`
-            <div class="clearfix" style="min-width: 140px;">
-                <div class="text-muted pull-left">оборуд.: </div>
-                <div class="pull-right">${eqQuality} / ${unit['equipment_count']}</div>
-            </div>
-             <div class="clearfix">
-                <div class="text-muted pull-left">рабы: </div>
-                <div class="pull-right">${empQuality} / ${unit['employee_count']}</div>
-            </div>
-
-            `);
-        });
-    }
-    
-    function findUnitUserID($links) {
-        let toReturn = null;
-        $links.each( function () {
-            const m = this.getAttribute('href').match(/\/(\w+)\/main\/unit\/view\/(\d+)/)
-            if (m !== null) {
-                toReturn = m[2];
-                return false;
-            }
-        });
-        return toReturn;
-    }
-    
-    function waitServiceUnits(el) {
-        new MutationObserver((mrs) => {
-            mrs.forEach((mr) => {
-                if (mr.oldValue.indexOf('updating') !== -1) {
-                    initProcessSalers($(mr.target));
-                }
-            });
-        
-        }).observe(el, {attributes: true, attributeOldValue: true, attributeFilter: ['class']});
-    }
-    
-    
-    // поиск таблицы на странице
-    const elListSalers = document.getElementById('service-units');
-    if (elListSalers !== null) {
-        waitServiceUnits(elListSalers);
-    }
-    
-    // поиск таблицы на мобальном окне
-    let marketing2modal = document.getElementById('marketing2-modal');
-    if (marketing2modal !== null) {
-        new MutationObserver((mrs) => {
-            mrs.forEach((mr) => {
-                if (mr.oldValue.indexOf('updating') !== -1) {
-                    const elListSalers2 = document.getElementById('service-units');
-                    if (elListSalers2 !== null) {
-                        waitServiceUnits(elListSalers2);
-                    }
-                }
-            });
-        
-        }).observe(marketing2modal, {attributes: true, attributeOldValue: true, attributeFilter: ['class']});
-    }
-    // ------------------------------------------------------
-    //
-    // ------------------------------------------------------
-    
-    
-    
-
     
     // ------------------------------------------------------
     // style
