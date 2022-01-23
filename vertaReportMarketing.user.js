@@ -3,7 +3,7 @@
 // @description Дополнительные данные в таблице отчетов по конурентам
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.1
+// @version 1.2
 // @include https://virtonomica.ru/*/main/unit/view/*
 // @include https://virtonomica.ru/*/main/globalreport/marketing*
 // ==/UserScript==
@@ -16,14 +16,14 @@ let run = async function () {
     $ = win.$;
     
     // проверка на точность соответсвия страницы
-   // const t2 = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)($|\/virtasement|\/$|#|\?)/)
+    // const t2 = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)($|\/virtasement|\/$|#|\?)/)
     const t = window.location.href.match(/\/(\w+)\/main\/(unit\/view\/|globalreport\/marketing)/)
     if (!t) {
         return;
     }
     
     // ==================================================
-    let ver = '1.1';
+    let ver = '1.2';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -31,6 +31,7 @@ let run = async function () {
     }
     
     consoleEcho('Дополнительные данные в таблице отчетов по конурентам');
+    
     // ==================================================
     
     function floor2(val) {
@@ -39,7 +40,7 @@ let run = async function () {
     
     function findUnitUserID($links) {
         let toReturn = null;
-        $links.each( function () {
+        $links.each(function () {
             const m = this.getAttribute('href').match(/\/(\w+)\/main\/unit\/view\/(\d+)/)
             if (m !== null) {
                 toReturn = m[2];
@@ -76,12 +77,11 @@ let run = async function () {
     // ------------------------------------------------------
     async function initProcessSalers($div) {
         const $table = $div.find('table');
-
+        
         const $thCollMat = $table.find('th:contains("Расходные материалы")');
-        $thCollMat.css({ 'max-width': "110px" });
+        $thCollMat.css({'max-width': "110px"});
         
         const $ths = $table.find('thead th');
-        
         
         
         const $thCollSize = $table.find('th:contains("Размер")');
@@ -101,41 +101,46 @@ let run = async function () {
         
         const $trs = $table.find('tbody tr');
         $trs.each(async function () {
+            const $tr = $(this);
+            const unitUserID = findUnitUserID($tr.find("td:eq(0) a"))
+            const unit = await getUnitData(unitUserID);
+            
             if (idxCollSize !== -1) {
-                const $tdBlockSize = $(this).find(`td:eq(${idxCollSize})`);
+                const $tdBlockSize = $tr.find(`td:eq(${idxCollSize})`);
                 const txtSize = $tdBlockSize.html();
                 $tdBlockSize.html(txtSize.replace(/рабочих мест/g, "мест"));
             }
             
             if (idxCollPrice !== -1) {
-                const $tdBlockPrice = $(this).find(`td:eq(${idxCollPrice})`);
+                const $tdBlockPrice = $tr.find(`td:eq(${idxCollPrice})`);
                 const txtBlockPrice = $tdBlockPrice.html();
-                $tdBlockPrice.html(txtBlockPrice.replace(/.00$/g, ""));
+                $tdBlockPrice.html(txtBlockPrice.replace(/\.00$/g, ""));
             }
             
             if (idxCollDistrict !== -1) {
-                const $tdBlockDistrict = $(this).find(`td:eq(${idxCollDistrict})`);
+                const $tdBlockDistrict = $tr.find(`td:eq(${idxCollDistrict})`);
                 let txtDistrict = $tdBlockDistrict.html();
                 txtDistrict = txtDistrict.replace(/ район| города/g, "");
                 txtDistrict = txtDistrict.replace(/Фешенебельный/g, "Фешка");
                 $tdBlockDistrict.html(txtDistrict);
+                $tdBlockDistrict.removeClass('text-center').addClass('text-right');
             }
             
             if (idxCollSales !== -1) {
-                const $tdBlockSales = $(this).find(`td:eq(${idxCollSales})`);
+                const $tdBlockSales = $tr.find(`td:eq(${idxCollSales})`);
                 let txtSales = $tdBlockSales.html();
-                txtSales = txtSales.replace(/около/g, "~");
-                txtSales = txtSales.replace(/более/g, ">");
-                txtSales = txtSales.replace(/менее/g, "<");
-                $tdBlockSales.html(txtSales);
+                txtSales = txtSales.replace(/nbsp/g, " ");
+                let ed = txtSales.split(' ');
+                ed = ed.pop();
+                
+                // txtSales = txtSales.replace(/около/g, "~");
+                // txtSales = txtSales.replace(/более/g, ">");
+                // txtSales = txtSales.replace(/менее/g, "<");
+                $tdBlockSales.html(`${(unit['sales'] * 1).toLocaleString('ru')} ${ed}`);
             }
             
             
-            const unitUserID = findUnitUserID($(this).find("td:eq(0) a"))
-            const unit = await getUnitData(unitUserID);
-            
-            const $tdBlock = $(this).find(`td:eq(${idxCollQl})`);
-            
+            const $tdBlock = $tr.find(`td:eq(${idxCollQl})`);
             
             let eqQuality = floor2(unit['equipment_quality']);
             let empQuality = floor2(unit['employee_level']);
@@ -152,7 +157,6 @@ let run = async function () {
             `);
         });
     }
-    
     
     
     const checkHashByService = window.location.href.match(/#by-service$/)
@@ -226,7 +230,6 @@ let run = async function () {
         });
     }
     
-
     
 }
 
