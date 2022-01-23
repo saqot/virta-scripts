@@ -3,7 +3,7 @@
 // @description Дополнительные данные на странице юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.6
+// @version 2.7
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -21,7 +21,7 @@ let run = async function () {
     }
     
     // ==================================================
-    let ver = '2.6';
+    let ver = '2.7';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -190,9 +190,9 @@ let run = async function () {
         const unit = await getUnitData(unitID);
         const unitType = unit['unit_class_kind'];
         const forecast = await getUnitForecast(unitID); // данные с прогноза
-        //console.log('unit', unit);
+        console.log('unit', unit);
         //console.log('forecast', forecast);
-        //console.log('unitType', unitType);
+        console.log('unitType', unitType);
         
         // исключаем заведомо не нужные
         if (['villa', 'network', 'warehouse'].includes(unitType)) {
@@ -251,7 +251,8 @@ let run = async function () {
         if ($elEmployee.length) {
             const kv = unit['competence_value'] * 1;    // квалификация игрока
             const kvp = unit['employee_level'] * 1;    // квалификация персонала
-            const kvpMax = calcMaxKvalaUser(unit);
+            let kvpMax = calcMaxKvalaUser(unit);
+
             
             const empCntMax = calcPersonalTop1(kv, kvp, unitType);
             const empCntCur = unit['employee_count'] * 1;
@@ -269,6 +270,11 @@ let run = async function () {
                 weightProc = floor2(Math.pow(load / 100, 3) * 100);
                 maxEmp = '';
                 nameEmp = 'ед.';
+            }
+            
+    
+            if (['animalfarm'].includes(unitType)) {
+                kvpMax = floor2(((100-weightProc)/100*unit['employee_level_required'])+unit['employee_level_required']*1);
             }
             
             const textColorProc = weightProc > 100 ? 'text-danger' : '';
@@ -310,10 +316,15 @@ let run = async function () {
             }
             
             const kvp = unit['employee_level'] * 1;    // квалификация персонала
-            const kvpMax = calcMaxKvalaUser(unit);
             const maxQty = calcEqQualMax(kvp);
             const curQty = floor2(unit['equipment_quality']);
-            
+            let kvpMax = calcMaxKvalaUser(unit);
+           
+            if (['animalfarm'].includes(unitType)) {
+                const load = procVal(forecast['max_tech'], forecast['tech']);
+                const weightProc = floor2(Math.pow(load / 100, 3) * 100);
+                kvpMax = floor2(((100-weightProc)/100*unit['employee_level_required'])+unit['employee_level_required']*1);
+            }
             
             const textColorQty = (curQty > maxQty || kvp > kvpMax) ? 'text-danger' : '';
             
@@ -751,6 +762,22 @@ let run = async function () {
            background-color: #FDECC9;
            padding: 8px 6px;
            text-align: right;
+        }
+        .ribbon.ribbon-color-primary {
+           background-color: #bac3d0 !important;
+           color: #384353 !important;
+        }
+        .ribbon.ribbon-color-primary > .ribbon-sub {
+           background-color: #bac3d0 !important;
+           color: #384353 !important;
+        }
+        .ribbon.ribbon-color-warning > .ribbon-sub {
+           background-color: #bac3d0 !important;
+           color: #384353 !important;
+        }
+        .ribbon.ribbon-color-warning > .ribbon-sub {
+           background-color: #bac3d0 !important;
+           color: #384353 !important;
         }
         `;
     document.body.appendChild(sheet);
