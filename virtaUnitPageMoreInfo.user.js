@@ -3,7 +3,7 @@
 // @description Дополнительные данные на странице юнита
 // @namespace virtonomica
 // @author SAQOT
-// @version 2.9
+// @version 3.0
 // @include https://virtonomica.ru/vera/main/unit/view/*
 // @run-at document-idle
 // ==/UserScript==
@@ -21,7 +21,7 @@ let run = async function () {
     }
     
     // ==================================================
-    let ver = '2.9';
+    let ver = '3.0';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -573,10 +573,10 @@ let run = async function () {
             initProcess($(elUnit));
         }, 500);
     
-        new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.oldValue.indexOf('updating') !== -1) {
-                    initProcess($(mutation.target));
+        new MutationObserver((mrs) => {
+            mrs.forEach((mr) => {
+                if (mr.oldValue !== null && mr.oldValue.indexOf('updating') !== -1) {
+                    initProcess($(mr.target));
                 }
             });
         
