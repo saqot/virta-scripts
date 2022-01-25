@@ -3,11 +3,12 @@
 // @description Дополнительные данные в таблице отчетов по конурентам
 // @namespace virtonomica
 // @author SAQOT
-// @version 1.2
+// @version 1.3
 // @include https://virtonomica.ru/*/main/unit/view/*
 // @include https://virtonomica.ru/*/main/globalreport/marketing*
+// @run-at document-idle
 // ==/UserScript==
-// 222@run-at document-idle
+//
 
 /* global $, unsafeWindow */
 
@@ -23,7 +24,7 @@ let run = async function () {
     }
     
     // ==================================================
-    let ver = '1.2';
+    let ver = '1.3';
     
     function consoleEcho(text, isRrror = false) {
         const bg = isRrror === true ? '#af1a00' : '#3897c7'
@@ -72,11 +73,70 @@ let run = async function () {
         });
     }
     
+    function getReportProduct(productID, geo) {
+        return new Promise((resolve) => {
+            $.ajax({
+                async      : true,
+                type       : 'GET',
+                url        : `https://virtonomica.ru/api/vera/main/marketing/report/retail/units?product_id=${productID}&geo=${geo}&wrap=0&format=json`,
+                crossDomain: true,
+                xhrFields  : {
+                    withCredentials: true,
+                },
+                global     : false,
+                dataType   : "json",
+                success    : function (res) {
+                    let rows = {};
+                    res.map((r) => {
+                        rows[r['unit_id']] = r;
+                    })
+                    
+                    resolve(rows);
+                },
+                error      : function (jqXHR, textStatus, error) {
+                    consoleEcho(`FAIL (ajax) {textStatus=${textStatus} , error=${error}}`, true);
+                },
+            });
+        });
+    }
+    
+    
+    function getReportGeoId($blockReport) {
+        return $blockReport.find('select[name="geo"]').find(":selected").val();
+    }
+    
+    let isFirstLoad = true;
+    
+    function getReportProductId($blockReport) {
+        let productID = $blockReport.find('input[name="product-filter"]:checked').val();
+        
+        if (isFirstLoad === true) {
+            isFirstLoad = false;
+            const catID = $blockReport.find('select[name="select_category"]').find(":selected").val();
+            const def = {
+                '422702': '422705', // красный бенз
+                '1531'  : '1506', // хлеб
+            };
+            productID = def[catID];
+        }
+        return productID;
+    }
+    
+    
     // ------------------------------------------------------
     // дополнительные данные для списка конкурентов по услугам
     // ------------------------------------------------------
-    async function initProcessSalers($div) {
+    async function initProcessSalers($div, isShop = false) {
         const $table = $div.find('table');
+        
+        let reports = {};
+        if (isShop === true) {
+            const $blockReport = $('.globalreport-marketing');
+            const geo = getReportGeoId($blockReport);
+            const productID = getReportProductId($blockReport);
+            reports = await getReportProduct(productID, geo);
+        }
+        
         
         const $thCollMat = $table.find('th:contains("Расходные материалы")');
         $thCollMat.css({'max-width': "110px"});
@@ -104,7 +164,6 @@ let run = async function () {
             const $tr = $(this);
             const unitUserID = findUnitUserID($tr.find("td:eq(0) a"))
             const unit = await getUnitData(unitUserID);
-            
             if (idxCollSize !== -1) {
                 const $tdBlockSize = $tr.find(`td:eq(${idxCollSize})`);
                 const txtSize = $tdBlockSize.html();
@@ -114,7 +173,7 @@ let run = async function () {
             if (idxCollPrice !== -1) {
                 const $tdBlockPrice = $tr.find(`td:eq(${idxCollPrice})`);
                 const txtBlockPrice = $tdBlockPrice.html();
-                $tdBlockPrice.html(txtBlockPrice.replace(/\.00$/g, ""));
+                $tdBlockPrice.html(txtBlockPrice.replace(/\.\d+$/g, ""));
             }
             
             if (idxCollDistrict !== -1) {
@@ -129,6 +188,7 @@ let run = async function () {
             if (idxCollSales !== -1) {
                 const $tdBlockSales = $tr.find(`td:eq(${idxCollSales})`);
                 let txtSales = $tdBlockSales.html();
+                
                 txtSales = txtSales.replace(/nbsp/g, " ");
                 let ed = txtSales.split(' ');
                 ed = ed.pop();
@@ -136,31 +196,49 @@ let run = async function () {
                 // txtSales = txtSales.replace(/около/g, "~");
                 // txtSales = txtSales.replace(/более/g, ">");
                 // txtSales = txtSales.replace(/менее/g, "<");
-                $tdBlockSales.html(`${(unit['sales'] * 1).toLocaleString('ru')} ${ed}`);
+                
+                
+                if (isShop === true) {
+                    const sales = (reports[unit['id']]['qty'] * 1).toLocaleString('ru');
+                    const quality = reports[unit['id']]['quality'] * 1;
+                    $tdBlockSales.html(`
+                        <div class="clearfix" style="min-width: 140px;">
+                            <div class="text-muted pull-left">продаж:</div><div class="pull-right">${sales} ${ed}</div>
+                        </div>
+                         <div class="clearfix">
+                            <div class="text-muted pull-left">кач:</div><div class="pull-right">${quality}</div>
+                        </div>
+                    `);
+                } else {
+                    $tdBlockSales.append(`${(unit['sales'] * 1).toLocaleString('ru')} ${ed}`);
+                }
+                
+            }
+            
+            if (idxCollQl !== -1) {
+                const $tdBlock = $tr.find(`td:eq(${idxCollQl})`);
+                
+                let eqQuality = floor2(unit['equipment_quality']);
+                let empQuality = floor2(unit['employee_level']);
+                $tdBlock.html(`
+                    <div class="clearfix" style="min-width: 140px;">
+                        <div class="text-muted pull-left">оборуд.:</div>
+                        <div class="pull-right">${eqQuality} <span class="text-muted">/</span> ${unit['equipment_count']}</div>
+                    </div>
+                     <div class="clearfix">
+                        <div class="text-muted pull-left">рабы:</div>
+                        <div class="pull-right">${empQuality} <span class="text-muted">/</span> ${unit['employee_count']}</div>
+                    </div>
+                `);
             }
             
             
-            const $tdBlock = $tr.find(`td:eq(${idxCollQl})`);
-            
-            let eqQuality = floor2(unit['equipment_quality']);
-            let empQuality = floor2(unit['employee_level']);
-            $tdBlock.html(`
-            <div class="clearfix" style="min-width: 140px;">
-                <div class="text-muted pull-left">оборуд.: </div>
-                <div class="pull-right">${eqQuality} / ${unit['equipment_count']}</div>
-            </div>
-             <div class="clearfix">
-                <div class="text-muted pull-left">рабы: </div>
-                <div class="pull-right">${empQuality} / ${unit['employee_count']}</div>
-            </div>
-
-            `);
         });
     }
     
     
-    const checkHashByService = window.location.href.match(/#by-service$/)
-    console.log('checkHashByService', checkHashByService);
+    const checkHashByService = window.location.href.match(/#(by-service|city-market2)$/)
+    
     
     function waitElementUpdate(el, callback) {
         new MutationObserver((mrs) => {
@@ -227,9 +305,26 @@ let run = async function () {
                     initProcessSalers($(elTarget));
                 });
             });
+            workShops();
         });
     }
     
+    // ------------------------------------------------------
+    // следим за табличкой на странице репорта у юнита
+    // ------------------------------------------------------
+    async function workShops() {
+        const elShops = document.getElementById('shops');
+        if (elShops !== null) {
+            await initProcessSalers($(elShops), true);
+            
+            
+            waitElementUpdate(elShops, (elTarget) => {
+                initProcessSalers($(elTarget), true);
+            });
+        }
+    }
+    
+    await workShops();
     
 }
 
