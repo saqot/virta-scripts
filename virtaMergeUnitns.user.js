@@ -16,7 +16,7 @@ let run = function () {
     $ = win.$;
     
     // проверка на точность соответсвия страницы
-    const t = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)$/)
+    const t = window.location.href.match(/\/(\w+)\/main\/unit\/view\/(\d+)($|\/$|#|\?)/)
     if (!t) {
         return;
     }
